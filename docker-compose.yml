@@ -4,7 +4,6 @@ services:
     image: homeassistant/home-assistant:stable
     volumes:
       - ./config:/config
-      - ./config/addons:/config/custom_components
       - ./config/media:/media
       - /etc/localtime:/etc/localtime:ro
       - /run/dbus:/run/dbus:ro

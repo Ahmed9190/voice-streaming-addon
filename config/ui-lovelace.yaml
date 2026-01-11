@@ -1,10 +1,36 @@
-# Simple Lovelace dashboard for testing custom cards
-title: Test Dashboard
+title: Voice Streaming Dashboard
+
+# Preload custom cards
+resources:
+  - url: /local/voice-sending-card.js
+    type: module
+  - url: /local/voice-receiving-card.js
+    type: module
+
 views:
-  - title: Test View
+  - title: WebRTC Audio
     cards:
-      - type: custom:simple-hello-world-card
-      - type: entities
-        title: Test Entities
-        entities:
-          - sun.sun
+      # 1. Voice Sender (Corrected from voice-streaming-card)
+      - type: custom:voice-sending-card
+        title: Voice Sender
+
+      # 2. Voice Receiver
+      - type: custom:voice-receiving-card
+        title: Voice Receiver
+
+      # 3. Direct Audio Stream
+      - type: iframe
+        url: /api/voice-audio/stream/latest.mp3
+        aspect_ratio: 50%
+        title: HTTP MP3 Stream
+
+      # 4. Play on VLC Button
+      - show_name: true
+        show_icon: true
+        type: button
+        name: Play on VLC (Direct)
+        icon: mdi:cast-audio
+        tap_action:
+          action: perform-action
+          perform_action: shell_command.play_vlc_stream
+          target: {}

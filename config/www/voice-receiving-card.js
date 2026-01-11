@@ -4,6 +4,27 @@
 (function () {
   'use strict';
 
+  // Constants for configuration
+  const CONSTANTS = {
+    RECONNECT: {
+      INITIAL_DELAY: 1000,
+      MAX_DELAY: 30000,
+      BACKOFF_FACTOR: 1.5,
+    },
+    TIMERS: {
+      STREAM_CHECK_INTERVAL: 5000,
+      AUTO_CONNECT_WAIT: 500,
+      UI_UPDATE_DELAY: 200,
+    },
+    AUDIO: {
+      FFT_SIZE: 256,
+    },
+    LATENCY: {
+      LOW: 50,
+      MEDIUM: 150,
+    }
+  };
+
   // Define the custom element
   class VoiceReceivingCard extends HTMLElement {
     constructor() {
@@ -19,7 +40,9 @@
       this.canvas = null;
       this.canvasContext = null;
       this.connectionAttempts = 0;
-      this.maxReconnectAttempts = 3;
+      this.reconnectDelay = CONSTANTS.RECONNECT.INITIAL_DELAY;
+      this.maxReconnectDelay = CONSTANTS.RECONNECT.MAX_DELAY;
+      this.reconnectTimer = null;
       this.hass = null;
       this.config = {};
       this.availableStreams = [];
@@ -174,6 +197,24 @@
           .latency-low { background: #4caf50; color: white; }
           .latency-medium { background: #ff9800; color: white; }
           .latency-high { background: #f44336; color: white; }
+
+          .connection-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse-dot 2s infinite;
+          }
+          
+          .connection-indicator.connected { background: #4caf50; }
+          .connection-indicator.connecting { background: #ff9800; }
+          .connection-indicator.disconnected { background: #f44336; }
+          
+          @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+          }
           
           .error {
             color: #f44336;
@@ -221,11 +262,10 @@
             </button>
             
             <div class="status">
-              <div>Status: <span id="statusText">${this.connectionStatus}</span></div>
-              ${this.selectedStream ?
-          `<div>Stream: ${this.selectedStream.substring(0, 20)}...</div>` :
-          '<div>No stream selected</div>'
-        }
+              <div>
+                <span class="connection-indicator ${this.connectionStatus}" id="connectionIndicator"></span>
+                Status: <span id="statusText">${this.connectionStatus}</span>
+              </div>
               <div class="latency-indicator ${this.getLatencyClass()}">
                 Latency: <span id="latencyText">${this.latency}</span>ms
               </div>
@@ -309,7 +349,7 @@
       try {
         await this.connectWebSocket();
         // Wait a bit to ensure WebSocket is fully connected
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, CONSTANTS.TIMERS.AUTO_CONNECT_WAIT));
         // Request list of available streams
         if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
           this.websocket.send(JSON.stringify({
@@ -334,7 +374,7 @@
             type: 'get_available_streams'
           }));
         }
-      }, 5000); // Check every 5 seconds
+      }, CONSTANTS.TIMERS.STREAM_CHECK_INTERVAL); // Check every 5 seconds
 
       // Re-render to update UI
       this.render();
@@ -363,6 +403,13 @@
           this.websocket.onopen = () => {
             console.log('WebSocket connected');
             this.connectionAttempts = 0;
+            this.reconnectDelay = CONSTANTS.RECONNECT.INITIAL_DELAY;
+            this.updateStatus('connected');
+
+            // If we were watching, re-request streams
+            if (this.isWatching) {
+              this.websocket.send(JSON.stringify({ type: 'get_available_streams' }));
+            }
             resolve();
           };
 
@@ -378,9 +425,19 @@
 
           this.websocket.onclose = () => {
             console.log('WebSocket closed');
-            if (this.connectionStatus !== 'error') {
-              this.updateStatus('disconnected');
-            }
+            this.updateStatus('disconnected');
+
+            if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+
+            this.connectionAttempts++;
+            const delay = Math.min(this.reconnectDelay * Math.pow(CONSTANTS.RECONNECT.BACKOFF_FACTOR, this.connectionAttempts - 1), this.maxReconnectDelay);
+
+            this.errorMessage = `Reconnecting in ${Math.round(delay / 1000)}s...`;
+            this.updateError();
+
+            this.reconnectTimer = setTimeout(() => {
+              this.connectWebSocket();
+            }, delay);
           };
         } catch (error) {
           console.error('Error connecting to WebSocket:', error);
@@ -400,7 +457,7 @@
             this.selectedStream = this.availableStreams[0];
             setTimeout(() => {
               this.startReceiving();
-            }, 500); // Small delay to ensure UI is updated
+            }, CONSTANTS.TIMERS.AUTO_CONNECT_WAIT); // Small delay to ensure UI is updated
           }
           break;
 
@@ -409,12 +466,24 @@
           if (!this.availableStreams.includes(data.stream_id)) {
             this.availableStreams.push(data.stream_id);
             this.render();
-            // If we're watching and this is the first stream, automatically start receiving
-            if (this.isWatching && this.availableStreams.length === 1 && !this.selectedStream && !this.isActive) {
-              this.selectedStream = data.stream_id;
-              setTimeout(() => {
-                this.startReceiving();
-              }, 500); // Small delay to ensure UI is updated
+
+            console.log("[VoiceReceived] Stream available:", data.stream_id, "Watching:", this.isWatching, "Active:", this.isActive);
+
+            // AGGRESSIVE AUTO-CONNECT:
+            // If watching, switch to the new stream immediately!
+            if (this.isWatching) {
+              console.log("[VoiceReceiver] Auto-switching to new stream!");
+
+              // If we were somehow stuck active, stop first
+              if (this.isActive) {
+                this.stopReceiving().then(() => {
+                  this.selectedStream = data.stream_id;
+                  setTimeout(() => this.startReceiving(), CONSTANTS.TIMERS.UI_UPDATE_DELAY);
+                });
+              } else {
+                this.selectedStream = data.stream_id;
+                setTimeout(() => this.startReceiving(), CONSTANTS.TIMERS.UI_UPDATE_DELAY);
+              }
             }
           }
           break;
@@ -475,7 +544,7 @@
             type: 'get_available_streams'
           }));
           // Wait a bit for the streams to be fetched
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, CONSTANTS.TIMERS.AUTO_CONNECT_WAIT));
         }
         await this.startReceiving();
       }
@@ -612,7 +681,7 @@
         const source = this.audioContext.createMediaStreamSource(stream);
         source.connect(analyzer);
 
-        analyzer.fftSize = 256;
+        analyzer.fftSize = CONSTANTS.AUDIO.FFT_SIZE;
         const dataArray = new Uint8Array(analyzer.frequencyBinCount);
 
         // Start visualization loop
@@ -690,8 +759,8 @@
 
     // Get latency class
     getLatencyClass() {
-      if (this.latency < 50) return 'latency-low';
-      if (this.latency < 150) return 'latency-medium';
+      if (this.latency < CONSTANTS.LATENCY.LOW) return 'latency-low';
+      if (this.latency < CONSTANTS.LATENCY.MEDIUM) return 'latency-medium';
       return 'latency-high';
     }
 
@@ -702,6 +771,13 @@
       if (statusText) {
         statusText.textContent = status;
       }
+
+      const indicator = this.shadowRoot.getElementById('connectionIndicator');
+      if (indicator) {
+        indicator.className = `connection-indicator ${status}`;
+      }
+
+
 
       // Update button
       const button = this.shadowRoot.getElementById('receiveButton');
@@ -781,7 +857,9 @@
   }
 
   // Define the custom element
-  customElements.define('voice-receiving-card', VoiceReceivingCard);
+  if (!customElements.get('voice-receiving-card')) {
+    customElements.define('voice-receiving-card', VoiceReceivingCard);
+  }
 
   // Register with Home Assistant
   window.customCards = window.customCards || [];

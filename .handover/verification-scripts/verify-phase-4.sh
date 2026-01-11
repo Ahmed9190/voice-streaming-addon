@@ -90,9 +90,9 @@ FAIL=0
 
 for result in $ac41 $ac42 $ac43 $ac44 $ac45 $ac46; do
     if [ "$result" = "y" ] || [ "$result" = "Y" ]; then
-        ((PASS++))
+        PASS=$((PASS+1))
     else
-        ((FAIL++))
+        FAIL=$((FAIL+1))
     fi
 done
 

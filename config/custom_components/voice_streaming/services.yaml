@@ -1,0 +1,10 @@
+play_on_speaker:
+  name: Play Voice Stream on Speaker
+  description: Play the live voice stream on a Home Assistant media player
+  fields:
+    entity_id:
+      name: Media Player
+      required: true
+      selector:
+        entity:
+          domain: media_player

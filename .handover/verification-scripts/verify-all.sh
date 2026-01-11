@@ -93,13 +93,20 @@ prompt_continue 6 7
 run_phase 7 "Reliability & Monitoring" "$SCRIPT_DIR/verify-phase-7.sh" || exit 1
 prompt_continue 7 8
 
-# Phase 8: Final Testing (MILESTONE)
-run_phase 8 "Final Testing & Deployment" "$SCRIPT_DIR/verify-phase-8.sh" || exit 1
+# Phase 8: Code Review (MILESTONE)
+run_phase 8 "Code Review & Optimization Loop" "$SCRIPT_DIR/verify-phase-8.sh" || exit 1
+echo ""
+echo "🎯 MILESTONE ACHIEVED: Codebase Optimized!"
+echo ""
+prompt_continue 8 9
+
+# Phase 9: Final Testing (MILESTONE)
+run_phase 9 "Final Testing & Deployment" "$SCRIPT_DIR/verify-phase-9.sh" || exit 1
 
 echo ""
 echo "╔═══════════════════════════════════════════════════════════════╗"
 echo "║                                                               ║"
-echo "║   🎉🎉🎉 ALL 8 PHASES COMPLETE! 🎉🎉🎉                       ║"
+echo "║   🎉🎉🎉 ALL 9 PHASES COMPLETE! 🎉🎉🎉                       ║"
 echo "║                                                               ║"
 echo "║   ✅ Phase 1: Bug Fixes                                       ║"
 echo "║   ✅ Phase 2: LAN Configuration                               ║"
@@ -108,7 +115,8 @@ echo "║   ✅ Phase 4: Cross-Device          [Mobile sends voice]      ║"
 echo "║   ✅ Phase 5: Production Hardening                            ║"
 echo "║   ✅ Phase 6: HA Media Player       [Plays on speaker]        ║"
 echo "║   ✅ Phase 7: Reliability                                     ║"
-echo "║   ✅ Phase 8: Final Testing         [Production ready]        ║"
+echo "║   ✅ Phase 8: Code Optimization     [Clean Code]              ║"
+echo "║   ✅ Phase 9: Final Verification    [Production Ready]        ║"
 echo "║                                                               ║"
 echo "║   System is PRODUCTION READY!                                 ║"
 echo "║                                                               ║"

@@ -1,1 +1,24 @@
+# Home Assistant
 config/.storage/
+config/*.log
+config/*.log.*
+config/home-assistant_v2.db*
+config/.ha_run.lock
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+
+# Environment / Secrets
+.env
+
+# OS
+.DS_Store
+
+# Node (if used in addons)
+node_modules/
+dist/
+

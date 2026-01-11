@@ -40,6 +40,13 @@ panel_custom:
 # Voice streaming component
 voice_streaming:
 
+# Ensure media_player loaded
+media_player:
+
+# Shell command to control VLC directly (bypassing UI integration requirement)
+shell_command:
+  play_vlc_stream: 'echo -e "admin\nadd http://192.168.2.120:8081/stream/latest.mp3" | nc 192.168.2.120 4212'
+
 # Logging for debugging
 logger:
   default: info
@@ -51,3 +58,6 @@ logger:
     # Track HTTP requests
     homeassistant.components.http: info
 
+# Enable YAML Dashboard
+lovelace:
+  mode: yaml

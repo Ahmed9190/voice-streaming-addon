@@ -1,0 +1,40 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate file structure
+        run: |
+          if [ ! -d "config/custom_components/voice_streaming" ]; then
+            echo "Error: config/custom_components/voice_streaming not found"
+            exit 1
+          fi
+          if [ ! -f "config/custom_components/voice_streaming/manifest.json" ]; then
+            echo "Error: manifest.json not found"
+            exit 1
+          fi
+          if [ ! -f "hacs.json" ]; then
+            echo "Error: hacs.json not found"
+            exit 1
+          fi
+          echo "Structure validation passed."
+
+  hassfest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Copy to standard structure for hassfest
+      - name: Prepare structure for hassfest
+        run: |
+          mkdir -p custom_components
+          cp -r config/custom_components/voice_streaming custom_components/
+      - uses: home-assistant/actions/hassfest@master

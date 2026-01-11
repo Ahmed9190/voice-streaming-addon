@@ -21,16 +21,16 @@ echo ""
 check() {
     if [ $1 -eq 0 ]; then
         echo "✅ PASS: $2"
-        ((PASS++))
+        PASS=$((PASS+1))
     else
         echo "❌ FAIL: $2"
-        ((FAIL++))
+        FAIL=$((FAIL+1))
     fi
 }
 
 warn() {
     echo "⚠️  WARN: $1"
-    ((WARN++))
+    WARN=$((WARN+1))
 }
 
 # AC3.1: Script exists and is executable

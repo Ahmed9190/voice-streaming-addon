@@ -24,9 +24,10 @@
 10. [Phase 5: Production Hardening](#phase-5-production-hardening)
 11. [Phase 6: HA Media Player Integration](#phase-6-ha-media-player-integration)
 12. [Phase 7: Reliability & Monitoring](#phase-7-reliability--monitoring)
-13. [Phase 8: Final Testing & Deployment](#phase-8-final-testing--deployment)
-14. [Definition of Done](#definition-of-done)
-15. [Risk Register](#risk-register)
+13. [Phase 8: Code Review & Optimization Loop](#phase-8-code-review--optimization-loop)
+14. [Phase 9: Final Testing & Deployment](#phase-9-final-testing--deployment)
+15. [Definition of Done](#definition-of-done)
+16. [Risk Register](#risk-register)
 
 ---
 
@@ -158,21 +159,25 @@ Phase 6: HA Media Player Integration ◄── MILESTONE: Plays on speaker
 Phase 7: Reliability & Monitoring
     │
     ▼
-Phase 8: Final Testing & Deployment ◄── MILESTONE: Production ready
+Phase 8: Code Review & Optimization Loop ◄── MILESTONE: Optimized
+    │
+    ▼
+Phase 9: Final Testing & Deployment ◄── MILESTONE: Production ready
 ```
 
 ### 4.2 Phase Summary
 
-| Phase | Name                        | Effort  | Milestone             |
-| ----- | --------------------------- | ------- | --------------------- |
-| 1     | Bug Fixes & Code Quality    | 45 min  | -                     |
-| 2     | LAN-Only Configuration      | 30 min  | -                     |
-| 3     | SSL Certificates for LAN    | 30 min  | -                     |
-| 4     | Cross-Device Verification   | 30 min  | ✅ Mobile sends voice |
-| 5     | Production Hardening        | 45 min  | -                     |
-| 6     | HA Media Player Integration | 2 hours | ✅ Plays on speaker   |
-| 7     | Reliability & Monitoring    | 1 hour  | -                     |
-| 8     | Final Testing & Deployment  | 30 min  | ✅ Production ready   |
+| Phase | Name                            | Effort  | Milestone             |
+| ----- | ------------------------------- | ------- | --------------------- |
+| 1     | Bug Fixes & Code Quality        | 45 min  | -                     |
+| 2     | LAN-Only Configuration          | 30 min  | -                     |
+| 3     | SSL Certificates for LAN        | 30 min  | -                     |
+| 4     | Cross-Device Verification       | 30 min  | ✅ Mobile sends voice |
+| 5     | Production Hardening            | 45 min  | -                     |
+| 6     | HA Media Player Integration     | 2 hours | ✅ Plays on speaker   |
+| 7     | Reliability & Monitoring        | 1 hour  | -                     |
+| 8     | Code Review & Optimization Loop | 2 hours | ✅ Code optimized     |
+| 9     | Final Testing & Deployment      | 30 min  | ✅ Production ready   |
 
 **Total Estimated Effort**: ~7 hours
 
@@ -193,7 +198,8 @@ All verification scripts are located in the `verification-scripts/` folder.
 ├── verify-phase-5.sh   # Production Hardening
 ├── verify-phase-6.sh   # HA Media Player Integration
 ├── verify-phase-7.sh   # Reliability & Monitoring
-├── verify-phase-8.sh   # Final Testing & Deployment
+├── verify-phase-8.sh   # Code Review & Optimization Loop
+├── verify-phase-9.sh   # Final Testing & Deployment
 └── verify-all.sh       # Master script (runs all phases)
 ```
 
@@ -263,9 +269,9 @@ version: 1.0.0
 {
   "domain": "voice_streaming",
   "name": "Voice Streaming",
-  "documentation": "https://github.com/custom-components/voice_streaming",
+  "documentation": "https://github.com/Ahmed9190/voice-streaming-addon",
   "dependencies": ["websocket_api"],
-  "codeowners": [],
+  "codeowners": ["@Ahmed9190"],
   "requirements": [],
   "version": "1.0.0"
 }
@@ -765,29 +771,72 @@ async def shutdown():
 
 ---
 
-## Phase 8: Final Testing & Deployment
+## Phase 8: Code Review & Optimization Loop
 
-**Objective**: Complete system verification and production deployment.
+**Objective**: Iteratively identify bottlenecks, review code, detect weaknesses, and optimize until production standards are met.
 
-**Duration**: 30 minutes
+**Duration**: 2 hours (Recursive)
 
 **Prerequisites**: Phase 7 complete
 
-**🎯 MILESTONE**: Production ready
+**🎯 MILESTONE**: Optimized Codebase
 
 **Verification**: `.handover/verification-scripts/verify-phase-8.sh`
 
 ### Tasks
 
+| ID  | Task                     | Output File      | Priority |
+| --- | ------------------------ | ---------------- | -------- |
+| 8.1 | Run Static Code Analysis | `LINT_REPORT.md` | 🔴 High  |
+| 8.2 | Identify Bottlenecks     | `BOTTLENECKS.md` | 🔴 High  |
+| 8.3 | Document Weaknesses      | `WEAKNESSES.md`  | 🔴 High  |
+| 8.4 | apply Fixes & Optimize   | Code Changes     | 🔴 High  |
+| 8.5 | Verify & Repeat Loop     | Updated Reports  | 🔴 High  |
+
+### Recursive Workflow
+
+1. **Analyze**: Run linting, profile performance, check logs.
+2. **Document**: Push findings to `WEAKNESSES.md`.
+3. **Fix**: Address high-priority issues.
+4. **Verify**: Run `verify-phase-8.sh`.
+5. **Loop**: If critical weaknesses remain, repeat.
+
+### Acceptance Criteria - Phase 8
+
+| ID    | Criterion                  | Pass Condition                    |
+| ----- | -------------------------- | --------------------------------- |
+| AC8.1 | No critical lint errors    | Flake8 / ESLint pass              |
+| AC8.2 | Latency < 500ms guaranteed | Performance analysis confirms     |
+| AC8.3 | No memory leaks            | Stable RAM usage over 10m         |
+| AC8.4 | Weaknesses resolved        | `WEAKNESSES.md` items checked off |
+
+**Run verification**: `./.handover/verification-scripts/verify-phase-8.sh`
+
+---
+
+## Phase 9: Final Testing & Deployment
+
+**Objective**: Complete system verification and production deployment.
+
+**Duration**: 30 minutes
+
+**Prerequisites**: Phase 8 complete
+
+**🎯 MILESTONE**: Production ready
+
+**Verification**: `.handover/verification-scripts/verify-phase-9.sh`
+
+### Tasks
+
 | ID  | Task                           | File                  | Priority  |
 | --- | ------------------------------ | --------------------- | --------- |
-| 8.1 | Create production start script | `start_production.sh` | 🔴 High   |
-| 8.2 | Run full integration test      | -                     | 🔴 High   |
-| 8.3 | Stress test (1 hour)           | -                     | 🟠 Medium |
-| 8.4 | Document deployment            | `DEPLOYMENT.md`       | 🟠 Medium |
-| 8.5 | Clean up test files            | -                     | 🟡 Low    |
+| 9.1 | Create production start script | `start_production.sh` | 🔴 High   |
+| 9.2 | Run full integration test      | -                     | 🔴 High   |
+| 9.3 | Stress test (1 hour)           | -                     | 🟠 Medium |
+| 9.4 | Document deployment            | `DEPLOYMENT.md`       | 🟠 Medium |
+| 9.5 | Clean up test files            | -                     | 🟡 Low    |
 
-### Task 8.1: Production Start Script
+### Task 9.1: Production Start Script
 
 Create `start_production.sh`:
 
@@ -801,15 +850,15 @@ Create `start_production.sh`:
 
 | ID    | Criterion                   | Pass Condition                   |
 | ----- | --------------------------- | -------------------------------- |
-| AC8.1 | All containers running      | `docker compose ps` shows all Up |
-| AC8.2 | Voice works mobile → server | Manual test passes               |
-| AC8.3 | Audio plays on HA speaker   | Manual test passes               |
-| AC8.4 | System stable for 1 hour    | No crashes/errors                |
-| AC8.5 | Disconnection recovery      | Reconnects automatically         |
-| AC8.6 | Latency < 1 second          | Measured and confirmed           |
-| AC8.7 | No internet required        | Works with internet disabled     |
+| AC9.1 | All containers running      | `docker compose ps` shows all Up |
+| AC9.2 | Voice works mobile → server | Manual test passes               |
+| AC9.3 | Audio plays on HA speaker   | Manual test passes               |
+| AC9.4 | System stable for 1 hour    | No crashes/errors                |
+| AC9.5 | Disconnection recovery      | Reconnects automatically         |
+| AC9.6 | Latency < 1 second          | Measured and confirmed           |
+| AC9.7 | No internet required        | Works with internet disabled     |
 
-**Run verification**: `./.handover/verification-scripts/verify-phase-8.sh`
+**Run verification**: `./.handover/verification-scripts/verify-phase-9.sh`
 
 ---
 
@@ -885,5 +934,5 @@ curl http://localhost:8080/metrics
 ---
 
 _Document prepared for Senior Developer implementation_  
-\_Project Manager sign-off: ****\_\_\_****  
+\_Project Manager sign-off: \***\*\_\_\_\*\***  
 _Date: 2026-01-11_

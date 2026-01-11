@@ -1,0 +1,54 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Prepare Release Artifact
+        run: |
+          mkdir -p dist/custom_components
+          cp -r config/custom_components/voice_streaming dist/custom_components/
+          cd dist
+          zip -r ../voice_streaming.zip custom_components
+          cd ..
+          ls -l voice_streaming.zip
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          # Simple release notes generator
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo "## Release $VERSION" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "### Installation via HACS" >> $GITHUB_OUTPUT
+          echo "1. Ensure HACS is installed." >> $GITHUB_OUTPUT
+          echo "2. Add this repository as a custom repository (Integration)." >> $GITHUB_OUTPUT
+          echo "3. Install 'Voice Streaming'." >> $GITHUB_OUTPUT
+          echo "4. Restart Home Assistant." >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: "Release ${{ github.ref_name }}"
+          body: ${{ steps.release_notes.outputs.notes }}
+          files: |
+            voice_streaming.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

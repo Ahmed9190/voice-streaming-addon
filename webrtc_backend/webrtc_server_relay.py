@@ -6,6 +6,8 @@ from typing import Dict
 
 from aiohttp import WSMsgType, web
 from aiortc import RTCConfiguration, RTCPeerConnection, RTCSessionDescription
+from aiortc.contrib.media import MediaRelay
+from audio_stream_server import AudioStreamServer
 
 logger = logging.getLogger(__name__)
 
@@ -14,22 +16,72 @@ class VoiceStreamingServer:
     def __init__(self):
         self.connections: Dict[str, dict] = {}
         self.active_streams: Dict[str, Dict] = {}  # stream_id -> {track, receivers[]}
+        self.total_audio_bytes = 0  # To be implemented with track wrapping
         self.app = web.Application()
+        self.relay = MediaRelay()
+        self.audio_server = AudioStreamServer(self)
         self.setup_routes()
 
     def setup_routes(self):
         self.app.router.add_get("/health", self.health_check)
+        self.app.router.add_get("/metrics", self.metrics_handler)
         self.app.router.add_get("/ws", self.websocket_handler)
+        self.start_time = asyncio.get_event_loop().time()
+        self.cleanup_task = None
+
+    async def metrics_handler(self, request):
+        """Provide Prometheus-compatible or JSON metrics"""
+        uptime = int(asyncio.get_event_loop().time() - self.start_time)
+        return web.json_response(
+            {
+                "uptime_seconds": uptime,
+                "active_connections": len(self.connections),
+                "active_streams": len(self.active_streams),
+                "total_audio_bytes": self.total_audio_bytes,
+                "webrtc_available": True,
+            }
+        )
 
     async def health_check(self, request):
+        uptime = int(asyncio.get_event_loop().time() - self.start_time)
         return web.json_response(
             {
                 "status": "healthy",
                 "webrtc_available": True,
+                "audio_server_running": self.audio_server is not None,
                 "active_streams": len(self.active_streams),
                 "connected_clients": len(self.connections),
+                "uptime_seconds": uptime,
             }
         )
+
+    async def cleanup_stale_streams(self):
+        """Periodically clean up streams with no active receivers"""
+        while True:
+            try:
+                await asyncio.sleep(300)  # Run every 5 minutes
+                stale_streams = []
+
+                for stream_id, stream_info in self.active_streams.items():
+                    if not stream_info.get("receivers"):
+                        # Check if stream has been inactive for more than 10 minutes
+                        if not hasattr(stream_info, "last_activity"):
+                            stream_info["last_activity"] = (
+                                asyncio.get_event_loop().time()
+                            )
+                        elif (
+                            asyncio.get_event_loop().time()
+                            - stream_info["last_activity"]
+                            > 600
+                        ):
+                            stale_streams.append(stream_id)
+
+                for stream_id in stale_streams:
+                    logger.info(f"Cleaning up stale stream: {stream_id}")
+                    del self.active_streams[stream_id]
+
+            except Exception as e:
+                logger.error(f"Error in cleanup task: {e}")
 
     async def websocket_handler(self, request):
         ws = web.WebSocketResponse()
@@ -110,6 +162,9 @@ class VoiceStreamingServer:
                 logger.info(f"Stored stream {stream_id} for sender {connection_id}")
                 logger.info(f"Active streams: {list(self.active_streams.keys())}")
 
+                # Broadast availability to all clients
+                await self.broadcast_stream_available(stream_id)
+
                 # Keep track alive
                 @track.on("ended")
                 async def on_ended():
@@ -127,7 +182,7 @@ class VoiceStreamingServer:
                                             }
                                         )
                                     )
-                                except:
+                                except Exception:
                                     pass
                         del self.active_streams[stream_id]
                     await self.broadcast_stream_ended(stream_id)
@@ -174,9 +229,10 @@ class VoiceStreamingServer:
         pc = RTCPeerConnection(configuration=config)
         connection["pc"] = pc
 
-        # Add the audio track from the sender
+        # Add the audio track from the sender using MediaRelay to support multiple consumers
         source_track = self.active_streams[stream_id]["track"]
-        pc.addTrack(source_track)
+        relayed_track = self.relay.subscribe(source_track)
+        pc.addTrack(relayed_track)
 
         @pc.on("iceconnectionstatechange")
         async def on_iceconnectionstatechange():
@@ -239,7 +295,7 @@ class VoiceStreamingServer:
         for conn_id, conn in self.connections.items():
             try:
                 await conn["ws"].send_str(message)
-            except:
+            except Exception:
                 pass
 
     async def broadcast_stream_ended(self, stream_id: str):
@@ -250,7 +306,7 @@ class VoiceStreamingServer:
         for conn_id, conn in self.connections.items():
             try:
                 await conn["ws"].send_str(message)
-            except:
+            except Exception:
                 pass
 
     async def handle_webrtc_offer(self, connection_id: str, data: dict):
@@ -392,7 +448,7 @@ class VoiceStreamingServer:
                                         {"type": "stream_ended", "stream_id": stream_id}
                                     )
                                 )
-                            except:
+                            except Exception:
                                 pass
                     del self.active_streams[stream_id]
                 await self.broadcast_stream_ended(stream_id)
@@ -420,6 +476,12 @@ class VoiceStreamingServer:
 
         site = web.TCPSite(runner, host, port)
         await site.start()
+
+        # Start the Audio Stream Server
+        await self.audio_server.start(host, 8081)
+
+        # Start cleanup task
+        self.cleanup_task = asyncio.create_task(self.cleanup_stale_streams())
 
         logger.info(f"Voice streaming relay server started on {host}:{port}")
 

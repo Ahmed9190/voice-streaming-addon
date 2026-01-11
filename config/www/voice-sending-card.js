@@ -4,6 +4,23 @@
 (function () {
   'use strict';
 
+  // Constants for configuration
+  const CONSTANTS = {
+    RECONNECT: {
+      INITIAL_DELAY: 1000,
+      MAX_DELAY: 30000,
+      BACKOFF_FACTOR: 1.5,
+    },
+    AUDIO: {
+      SAMPLE_RATE: 16000,
+      FFT_SIZE: 256,
+    },
+    LATENCY: {
+      LOW: 50,
+      MEDIUM: 150,
+    }
+  };
+
   // Define the custom element
   class VoiceSendingCard extends HTMLElement {
     constructor() {
@@ -21,7 +38,9 @@
       this.canvas = null;
       this.canvasContext = null;
       this.connectionAttempts = 0;
-      this.maxReconnectAttempts = 3;
+      this.reconnectDelay = CONSTANTS.RECONNECT.INITIAL_DELAY;
+      this.maxReconnectDelay = CONSTANTS.RECONNECT.MAX_DELAY;
+      this.reconnectTimer = null;
       this.hass = null;
       this.config = {};
     }
@@ -147,6 +166,32 @@
           .latency-medium { background: #ff9800; color: white; }
           .latency-high { background: #f44336; color: white; }
           
+          .connection-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse-dot 2s infinite;
+          }
+          
+          .connection-indicator.connected {
+            background: #4caf50;
+          }
+          
+          .connection-indicator.connecting {
+            background: #ff9800;
+          }
+          
+          .connection-indicator.disconnected {
+            background: #f44336;
+          }
+          
+          @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+          }
+          
           .error {
             color: #f44336;
             font-weight: bold;
@@ -166,7 +211,10 @@
             </button>
             
             <div class="status">
-              <div>Status: <span id="statusText">${this.connectionStatus}</span></div>
+              <div>
+                <span class="connection-indicator ${this.connectionStatus}" id="connectionIndicator"></span>
+                Status: <span id="statusText">${this.connectionStatus}</span>
+              </div>
               <div class="latency-indicator ${this.getLatencyClass()}">
                 Latency: <span id="latencyText">${this.latency}</span>ms
               </div>
@@ -245,7 +293,7 @@
             echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true,
-            sampleRate: 16000,
+            sampleRate: CONSTANTS.AUDIO.SAMPLE_RATE,
             channelCount: 1
           }
         });
@@ -257,7 +305,7 @@
         const source = this.audioContext.createMediaStreamSource(this.mediaStream);
         source.connect(this.analyzer);
 
-        this.analyzer.fftSize = 256;
+        this.analyzer.fftSize = CONSTANTS.AUDIO.FFT_SIZE;
         this.startAudioVisualization();
 
         // Create RTCPeerConnection with LAN-only settings (no external STUN)
@@ -371,6 +419,8 @@
           this.websocket.onopen = () => {
             console.log('WebSocket connected');
             this.connectionAttempts = 0;
+            this.reconnectDelay = CONSTANTS.RECONNECT.INITIAL_DELAY; // Reset delay on successful connection
+            this.updateStatus('connected');
             resolve();
           };
 
@@ -386,21 +436,35 @@
 
           this.websocket.onclose = () => {
             console.log('WebSocket closed');
-            // Attempt to reconnect if we haven't exceeded max attempts
-            if (this.connectionAttempts < this.maxReconnectAttempts) {
-              this.connectionAttempts++;
-              setTimeout(() => {
-                this.connectWebSocket().then(() => {
-                  // Reinitialize after reconnect
-                  if (this.isActive) {
-                    this.stopSending();
-                    this.startSending();
-                  }
-                }).catch(e => {
-                  console.error('Reconnect failed:', e);
-                });
-              }, 2000);
+            this.updateStatus('disconnected');
+
+            // Clear any existing reconnect timer
+            if (this.reconnectTimer) {
+              clearTimeout(this.reconnectTimer);
             }
+
+            // Always attempt to reconnect with exponential backoff
+            this.connectionAttempts++;
+            const delay = Math.min(this.reconnectDelay * Math.pow(CONSTANTS.RECONNECT.BACKOFF_FACTOR, this.connectionAttempts - 1), this.maxReconnectDelay);
+
+            console.log(`Reconnecting in ${delay}ms (attempt ${this.connectionAttempts})...`);
+            this.errorMessage = `Reconnecting in ${Math.round(delay / 1000)}s...`;
+            this.updateError();
+
+            this.reconnectTimer = setTimeout(() => {
+              this.connectWebSocket().then(() => {
+                console.log('Reconnected successfully');
+                this.errorMessage = '';
+                this.updateError();
+                // Reinitialize if we were active
+                if (this.isActive) {
+                  this.stopSending();
+                  this.startSending();
+                }
+              }).catch(e => {
+                console.error('Reconnect failed:', e);
+              });
+            }, delay);
           };
         } catch (error) {
           console.error('Error connecting to WebSocket:', error);
@@ -512,8 +576,8 @@
 
     // Get latency class
     getLatencyClass() {
-      if (this.latency < 50) return 'latency-low';
-      if (this.latency < 150) return 'latency-medium';
+      if (this.latency < CONSTANTS.LATENCY.LOW) return 'latency-low';
+      if (this.latency < CONSTANTS.LATENCY.MEDIUM) return 'latency-medium';
       return 'latency-high';
     }
 
@@ -523,6 +587,12 @@
       const statusText = this.shadowRoot.getElementById('statusText');
       if (statusText) {
         statusText.textContent = status;
+      }
+
+      // Update connection indicator
+      const indicator = this.shadowRoot.getElementById('connectionIndicator');
+      if (indicator) {
+        indicator.className = `connection-indicator ${status}`;
       }
 
       // Update button
@@ -585,7 +655,9 @@
   }
 
   // Define the custom element
-  customElements.define('voice-sending-card', VoiceSendingCard);
+  if (!customElements.get('voice-sending-card')) {
+    customElements.define('voice-sending-card', VoiceSendingCard);
+  }
 
   // Register with Home Assistant
   window.customCards = window.customCards || [];

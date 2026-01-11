@@ -30,6 +30,19 @@ The solution consists of four main components:
 
 ## Installation
 
+### Method 1: HACS (Home Assistant Community Store)
+
+1. Open HACS in your Home Assistant instance.
+2. Click on the 3-dots menu in the top right corner.
+3. Select "Custom repositories".
+4. Enter the repository URL.
+5. Select "Integration" as the category.
+6. Click "ADD".
+7. Find "Voice Streaming" in the list and click "Install".
+8. Restart Home Assistant.
+
+### Method 2: Manual Installation (Development / Standalone)
+
 1. Clone this repository:
 
    ```bash
