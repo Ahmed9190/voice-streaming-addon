@@ -195,12 +195,12 @@
           </div>
         </div>
       `;
-      
+
       // Add event listeners
       this.shadowRoot.getElementById('sendButton').addEventListener('click', () => {
         this.toggleSending();
       });
-      
+
       // Initialize canvas
       this.canvas = this.shadowRoot.querySelector('canvas');
       if (this.canvas) {
@@ -221,12 +221,24 @@
     async startSending() {
       try {
         this.updateStatus('connecting');
-        
+
         // First connect WebSocket if not already connected
         if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
           await this.connectWebSocket();
         }
-        
+
+        // Try to get local IP address for direct connection
+        this.getLocalIPAddress().then(ip => {
+          if (ip && this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+            this.websocket.send(JSON.stringify({
+              type: 'local_ip',
+              ip: ip
+            }));
+          }
+        }).catch(e => {
+          console.log('Could not get local IP address:', e);
+        });
+
         // Request microphone permission
         this.mediaStream = await navigator.mediaDevices.getUserMedia({
           audio: {
@@ -241,23 +253,21 @@
         // Initialize audio context for visualization
         this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
         this.analyzer = this.audioContext.createAnalyser();
-        
+
         const source = this.audioContext.createMediaStreamSource(this.mediaStream);
         source.connect(this.analyzer);
-        
+
         this.analyzer.fftSize = 256;
         this.startAudioVisualization();
 
-        // Create RTCPeerConnection with optimized settings
+        // Create RTCPeerConnection with LAN-only settings (no external STUN)
         this.peerConnection = new RTCPeerConnection({
-          iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' }
-          ],
+          iceServers: [],  // Empty for LAN-only operation
           bundlePolicy: 'max-bundle',
           rtcpMuxPolicy: 'require',
           sdpSemantics: 'unified-plan',
-          iceCandidatePoolSize: 10
+          iceCandidatePoolSize: 0,
+          iceTransportPolicy: 'all'
         });
 
         // Add audio track
@@ -267,22 +277,33 @@
 
         // Handle ICE candidates
         this.peerConnection.onicecandidate = (event) => {
-          if (event.candidate && this.websocket && this.websocket.readyState === WebSocket.OPEN) {
-            this.websocket.send(JSON.stringify({
-              type: 'ice_candidate',
-              candidate: event.candidate
-            }));
+          if (event.candidate) {
+            console.log('Local ICE candidate gathered:', event.candidate);
+            if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+              this.websocket.send(JSON.stringify({
+                type: 'ice_candidate',
+                candidate: event.candidate
+              }));
+            }
+          } else {
+            console.log('ICE gathering completed');
           }
         };
 
         // Handle ICE connection state changes
         this.peerConnection.oniceconnectionstatechange = () => {
           console.log('ICE connection state:', this.peerConnection.iceConnectionState);
-          if (this.peerConnection.iceConnectionState === 'failed' || 
-              this.peerConnection.iceConnectionState === 'disconnected') {
+          if (this.peerConnection.iceConnectionState === 'failed' ||
+            this.peerConnection.iceConnectionState === 'disconnected') {
             console.log('ICE connection failed or disconnected');
             this.updateStatus('error');
-            this.errorMessage = 'Connection failed';
+            this.errorMessage = 'Connection failed: ' + this.peerConnection.iceConnectionState;
+            this.updateError();
+          } else if (this.peerConnection.iceConnectionState === 'connected' ||
+            this.peerConnection.iceConnectionState === 'completed') {
+            console.log('ICE connection successful');
+            this.updateStatus('connected');
+            this.errorMessage = '';
             this.updateError();
           }
         };
@@ -291,12 +312,12 @@
         this.websocket.send(JSON.stringify({
           type: 'start_sending'
         }));
-        
+
         this.isActive = true;
         this.updateStatus('connected');
         this.errorMessage = '';
         this.render();
-        
+
       } catch (error) {
         console.error('Error starting sending:', error);
         this.updateStatus('error');
@@ -344,25 +365,25 @@
         try {
           const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
           const wsUrl = `${protocol}//${window.location.host}/api/voice-streaming/ws`;
-          
+
           this.websocket = new WebSocket(wsUrl);
-          
+
           this.websocket.onopen = () => {
             console.log('WebSocket connected');
             this.connectionAttempts = 0;
             resolve();
           };
-          
+
           this.websocket.onmessage = async (event) => {
             const data = JSON.parse(event.data);
             await this.handleWebSocketMessage(data);
           };
-          
+
           this.websocket.onerror = (error) => {
             console.error('WebSocket error:', error);
             reject(error);
           };
-          
+
           this.websocket.onclose = () => {
             console.log('WebSocket closed');
             // Attempt to reconnect if we haven't exceeded max attempts
@@ -398,14 +419,14 @@
             try {
               // Wait a bit for the peer connection to be fully set up
               await new Promise(resolve => setTimeout(resolve, 100));
-              
+
               const offer = await this.peerConnection.createOffer({
                 offerToReceiveAudio: false,
                 offerToReceiveVideo: false
               });
-              
+
               await this.peerConnection.setLocalDescription(offer);
-              
+
               if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
                 this.websocket.send(JSON.stringify({
                   type: 'webrtc_offer',
@@ -423,7 +444,7 @@
             }
           }
           break;
-          
+
         case 'webrtc_answer':
           if (this.peerConnection) {
             await this.peerConnection.setRemoteDescription(
@@ -431,7 +452,7 @@
             );
           }
           break;
-          
+
         case 'audio_data':
           // Handle processed audio data from server
           this.updateLatency(data.timestamp);
@@ -442,34 +463,34 @@
     // Start audio visualization
     startAudioVisualization() {
       if (!this.analyzer || !this.canvasContext) return;
-      
+
       const dataArray = new Uint8Array(this.analyzer.frequencyBinCount);
-      
+
       const draw = () => {
         requestAnimationFrame(draw);
-        
+
         if (!this.analyzer) return;
-        
+
         this.analyzer.getByteFrequencyData(dataArray);
-        
+
         this.canvasContext.fillStyle = '#f0f0f0';
         this.canvasContext.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        
+
         const barWidth = (this.canvas.width / dataArray.length) * 2.5;
         let barHeight;
         let x = 0;
-        
+
         for (let i = 0; i < dataArray.length; i++) {
           barHeight = (dataArray[i] / 255) * this.canvas.height;
-          
+
           this.canvasContext.fillStyle = `rgb(${barHeight + 100}, 50, 50)`;
-          this.canvasContext.fillRect(x, this.canvas.height - barHeight / 2, 
-                                     barWidth, barHeight);
-          
+          this.canvasContext.fillRect(x, this.canvas.height - barHeight / 2,
+            barWidth, barHeight);
+
           x += barWidth + 1;
         }
       };
-      
+
       draw();
     }
 
@@ -481,7 +502,7 @@
       if (latencyText) {
         latencyText.textContent = this.latency;
       }
-      
+
       // Update latency indicator class
       const latencyIndicator = this.shadowRoot.querySelector('.latency-indicator');
       if (latencyIndicator) {
@@ -503,7 +524,7 @@
       if (statusText) {
         statusText.textContent = status;
       }
-      
+
       // Update button
       const button = this.shadowRoot.getElementById('sendButton');
       if (button) {
@@ -523,6 +544,43 @@
       if (errorElement) {
         errorElement.textContent = this.errorMessage;
       }
+    }
+
+    // Get local IP address
+    getLocalIPAddress() {
+      return new Promise((resolve, reject) => {
+        // Create a WebRTC peer connection to get local IP
+        const pc = new RTCPeerConnection({
+          iceServers: []
+        });
+
+        pc.createDataChannel('');
+        pc.createOffer()
+          .then(offer => pc.setLocalDescription(offer))
+          .then(() => {
+            setTimeout(() => {
+              const lines = pc.localDescription.sdp.split('\n');
+              for (let i = 0; i < lines.length; i++) {
+                if (lines[i].indexOf('candidate') < 0) continue;
+                const parts = lines[i].split(' ');
+                const ip = parts[4];
+                // Check if it's a private IP address (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+                if (ip.startsWith('192.168.') || ip.startsWith('10.') ||
+                  (ip.startsWith('172.') && parseInt(ip.split('.')[1]) >= 16 && parseInt(ip.split('.')[1]) <= 31)) {
+                  pc.close();
+                  resolve(ip);
+                  return;
+                }
+              }
+              pc.close();
+              reject('No local IP found');
+            }, 1000);
+          })
+          .catch(err => {
+            pc.close();
+            reject(err);
+          });
+      });
     }
   }
 

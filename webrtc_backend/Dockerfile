@@ -25,9 +25,9 @@ COPY . .
 # Expose port
 EXPOSE 8080
 
-# Health check
+# Health check using Python (curl not installed in slim image)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s \
-  CMD curl -f http://localhost:8080/health || exit 1
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')" || exit 1
 
 # Start the relay server
 CMD ["python", "webrtc_server_relay.py"]

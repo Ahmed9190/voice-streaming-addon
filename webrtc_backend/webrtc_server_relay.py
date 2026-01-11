@@ -5,7 +5,7 @@ import uuid
 from typing import Dict
 
 from aiohttp import WSMsgType, web
-from aiortc import RTCPeerConnection, RTCSessionDescription
+from aiortc import RTCConfiguration, RTCPeerConnection, RTCSessionDescription
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +78,8 @@ class VoiceStreamingServer:
             await self.handle_webrtc_answer(connection_id, data)
         elif message_type == "ice_candidate":
             await self.handle_ice_candidate(connection_id, data)
+        elif message_type == "local_ip":
+            await self.handle_local_ip(connection_id, data)
 
     async def setup_sender(self, connection_id: str):
         """Set up a client as an audio sender"""
@@ -85,8 +87,10 @@ class VoiceStreamingServer:
         connection = self.connections[connection_id]
         connection["role"] = "sender"
 
-        # Create RTCPeerConnection for receiving audio
-        pc = RTCPeerConnection()
+        # Create RTCPeerConnection with LAN-only ICE configuration
+        # Empty iceServers means only host candidates (local IPs) will be used
+        config = RTCConfiguration(iceServers=[])
+        pc = RTCPeerConnection(configuration=config)
         connection["pc"] = pc
 
         @pc.on("track")
@@ -105,9 +109,6 @@ class VoiceStreamingServer:
 
                 logger.info(f"Stored stream {stream_id} for sender {connection_id}")
                 logger.info(f"Active streams: {list(self.active_streams.keys())}")
-
-                # Notify all receivers about new stream
-                await self.broadcast_stream_available(stream_id)
 
                 # Keep track alive
                 @track.on("ended")
@@ -130,6 +131,19 @@ class VoiceStreamingServer:
                                     pass
                         del self.active_streams[stream_id]
                     await self.broadcast_stream_ended(stream_id)
+
+        @pc.on("iceconnectionstatechange")
+        async def on_iceconnectionstatechange():
+            logger.info(
+                f"ICE connection state for sender {connection_id}: {pc.iceConnectionState}"
+            )
+            if pc.iceConnectionState == "failed":
+                logger.warning(f"ICE connection failed for sender {connection_id}")
+                await pc.close()
+            elif pc.iceConnectionState == "connected":
+                logger.info(f"ICE connection established for sender {connection_id}")
+            elif pc.iceConnectionState == "completed":
+                logger.info(f"ICE connection completed for sender {connection_id}")
 
         # Don't create offer here, wait for the client to send an offer after adding tracks
         await connection["ws"].send_str(
@@ -155,13 +169,27 @@ class VoiceStreamingServer:
         self.active_streams[stream_id]["receivers"].append(connection_id)
         connection["stream_id"] = stream_id
 
-        # Create RTCPeerConnection for sending audio
-        pc = RTCPeerConnection()
+        # Create RTCPeerConnection with LAN-only ICE configuration
+        config = RTCConfiguration(iceServers=[])
+        pc = RTCPeerConnection(configuration=config)
         connection["pc"] = pc
 
         # Add the audio track from the sender
         source_track = self.active_streams[stream_id]["track"]
         pc.addTrack(source_track)
+
+        @pc.on("iceconnectionstatechange")
+        async def on_iceconnectionstatechange():
+            logger.info(
+                f"ICE connection state for receiver {connection_id}: {pc.iceConnectionState}"
+            )
+            if pc.iceConnectionState == "failed":
+                logger.warning(f"ICE connection failed for receiver {connection_id}")
+                await pc.close()
+            elif pc.iceConnectionState == "connected":
+                logger.info(f"ICE connection established for receiver {connection_id}")
+            elif pc.iceConnectionState == "completed":
+                logger.info(f"ICE connection completed for receiver {connection_id}")
 
         # Create and send offer to the receiver
         try:
@@ -265,28 +293,87 @@ class VoiceStreamingServer:
         await pc.setRemoteDescription(answer)
 
     async def handle_ice_candidate(self, connection_id: str, data: dict):
-        connection = self.connections[connection_id]
-        pc = connection["pc"]
+        connection = self.connections.get(connection_id)
+        if not connection:
+            logger.warning(f"No connection found for {connection_id}")
+            return
 
-        if pc and pc.remoteDescription:
-            # The candidate might be a dict, we need to convert it to RTCIceCandidate
-            candidate_data = data["candidate"]
+        pc = connection.get("pc")
+
+        if not pc:
+            logger.warning(f"No peer connection for {connection_id}")
+            return
+
+        if not pc.remoteDescription:
+            logger.warning(
+                f"Cannot add ICE candidate for {connection_id}: No remote description yet"
+            )
+            return
+
+        candidate_data = data.get("candidate")
+        if not candidate_data:
+            logger.info(f"Empty ICE candidate (end of candidates) for {connection_id}")
+            return
+
+        logger.info(
+            f"Received ICE candidate for connection {connection_id}: {candidate_data}"
+        )
+
+        # Browser sends ICE candidates in this format:
+        # {
+        #   "candidate": "candidate:xxx 1 udp 2122260223 192.168.1.x 12345 typ host ...",
+        #   "sdpMid": "0",
+        #   "sdpMLineIndex": 0
+        # }
+        #
+        # For aiortc, we need to parse the candidate string.
+        # However, aiortc's trickle ICE support is limited.
+        # The best approach is to just log and let the connection work
+        # with candidates exchanged via SDP.
+
+        try:
+            # Check if this is a dict with 'candidate' string (browser format)
             if isinstance(candidate_data, dict):
-                # For aiortc, we can directly pass the dictionary
-                # aiortc will parse the candidate string automatically
-                # Check if the dictionary has the required keys
-                if 'candidate' in candidate_data:
-                    try:
-                        await pc.addIceCandidate(candidate_data)
-                    except Exception as e:
-                        logger.error(f"Error adding ICE candidate: {e}")
-                else:
-                    logger.error(f"Invalid ICE candidate format: {candidate_data}")
+                candidate_str = candidate_data.get("candidate", "")
+                sdp_mid = candidate_data.get("sdpMid", "0")
+                sdp_mline_index = candidate_data.get("sdpMLineIndex", 0)
             else:
-                try:
-                    await pc.addIceCandidate(candidate_data)
-                except Exception as e:
-                    logger.error(f"Error adding ICE candidate: {e}")
+                candidate_str = str(candidate_data)
+                sdp_mid = "0"
+                sdp_mline_index = 0
+
+            # Empty candidate string means end of candidates
+            if not candidate_str or candidate_str == "":
+                logger.info(f"End of ICE candidates for {connection_id}")
+                return
+
+            # Log the candidate details for debugging
+            logger.debug(f"ICE candidate string: {candidate_str}")
+            logger.debug(f"sdpMid: {sdp_mid}, sdpMLineIndex: {sdp_mline_index}")
+
+            # Note: aiortc handles ICE internally via the SDP exchange.
+            # Trickle ICE (adding candidates after the offer/answer) has limited support.
+            # The connection should still work because:
+            # 1. Host candidates are included in the SDP
+            # 2. aiortc's ICE implementation gathers its own candidates
+            #
+            # For LAN-only operation, this is usually sufficient.
+            logger.info(
+                f"ICE candidate received for {connection_id} (aiortc handles ICE internally)"
+            )
+
+        except Exception as e:
+            logger.error(f"Error processing ICE candidate for {connection_id}: {e}")
+
+    async def handle_local_ip(self, connection_id: str, data: dict):
+        """Handle local IP address information from clients"""
+        local_ip = data.get("ip")
+        if local_ip:
+            logger.info(f"Local IP for connection {connection_id}: {local_ip}")
+            # Store the local IP in the connection data
+            connection = self.connections.get(connection_id)
+            if connection:
+                connection["local_ip"] = local_ip
 
     async def cleanup_connection(self, connection_id: str):
         if connection_id in self.connections:

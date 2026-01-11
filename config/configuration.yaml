@@ -14,12 +14,15 @@ api:
 http:
   use_x_forwarded_for: true
   trusted_proxies:
+    - 127.0.0.1
+    - ::1
     - 172.16.0.0/12
     - 192.168.0.0/16
     - 10.0.0.0/8
   cors_allowed_origins:
-    - https://localhost:443
-    - https://homeassistant.local:443
+    - https://localhost
+    - https://homeassistant.local
+    - https://10.132.148.130
 
 # Custom panels for our voice streaming interface
 panel_custom:

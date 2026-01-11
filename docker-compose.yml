@@ -10,14 +10,11 @@ services:
       - /run/dbus:/run/dbus:ro
     restart: unless-stopped
     privileged: true
+    network_mode: host
     environment:
       - TZ=Africa/Cairo
-    devices:
-      - /dev/ttyUSB0:/dev/ttyUSB0  # Optional: for Zigbee/Z-Wave
-    ports:
-      - "8123:8123"
-      - "1900:1900/udp"  # For device discovery
-      - "5353:5353/udp"  # mDNS
+    # devices:
+    #   - /dev/ttyUSB0:/dev/ttyUSB0  # Optional: for Zigbee/Z-Wave
     labels:
       - "com.centurylinklabs.watchtower.enable=false"
 
@@ -25,10 +22,14 @@ services:
     container_name: voice-streaming
     build: 
       context: ./webrtc_backend
-    ports:
-      - "8080:8080"
+    network_mode: host
     environment:
       - TZ=Africa/Cairo
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     restart: unless-stopped
     volumes:
       - ./webrtc_backend:/app
@@ -37,17 +38,11 @@ services:
   nginx:
     container_name: ha-nginx
     image: nginx:alpine
+    network_mode: host
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./ssl:/etc/ssl:ro
-    ports:
-      - "443:443"
-      - "80:80"
     restart: unless-stopped
     depends_on:
       - homeassistant
       - voice_streaming
-
-networks:
-  default:
-    driver: bridge

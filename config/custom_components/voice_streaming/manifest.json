@@ -1,7 +1,9 @@
-name: Voice Streaming
-domain: voice_streaming
-documentation: https://github.com/custom-components/voice_streaming
-dependencies: ["websocket_api"]
-codeowners: ["@yourusername"]
-requirements: []
-version: 1.0.0
+{
+  "domain": "voice_streaming",
+  "name": "Voice Streaming",
+  "documentation": "https://github.com/custom-components/voice_streaming",
+  "dependencies": ["websocket_api"],
+  "codeowners": [],
+  "requirements": [],
+  "version": "1.0.0"
+}

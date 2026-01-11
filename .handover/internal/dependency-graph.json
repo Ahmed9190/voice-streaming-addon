@@ -1,0 +1,85 @@
+{
+  "project": "webrtc_voice_sending",
+  "generated_at": "2026-01-11T16:20:00+01:00",
+  "nodes": [
+    {
+      "id": "homeassistant",
+      "type": "service",
+      "name": "Home Assistant",
+      "path": "docker-compose.yml:homeassistant",
+      "port": 8123,
+      "dependencies": []
+    },
+    {
+      "id": "voice_streaming",
+      "type": "service",
+      "name": "Voice Streaming Backend",
+      "path": "webrtc_backend/",
+      "port": 8080,
+      "dependencies": ["aiortc", "aiohttp", "numpy"]
+    },
+    {
+      "id": "nginx",
+      "type": "service",
+      "name": "Nginx Reverse Proxy",
+      "path": "nginx.conf",
+      "port": 443,
+      "dependencies": ["homeassistant", "voice_streaming"]
+    },
+    {
+      "id": "voice_sending_card",
+      "type": "frontend",
+      "name": "Voice Sending Card",
+      "path": "config/www/voice-sending-card.js",
+      "dependencies": ["voice_streaming"]
+    },
+    {
+      "id": "voice_receiving_card",
+      "type": "frontend",
+      "name": "Voice Receiving Card",
+      "path": "config/www/voice-receiving-card.js",
+      "dependencies": ["voice_streaming"]
+    },
+    {
+      "id": "voice_streaming_component",
+      "type": "ha_component",
+      "name": "Voice Streaming HA Component",
+      "path": "config/custom_components/voice_streaming/",
+      "dependencies": ["homeassistant"]
+    }
+  ],
+  "edges": [
+    { "from": "nginx", "to": "homeassistant", "type": "proxy", "path": "/*" },
+    { "from": "nginx", "to": "voice_streaming", "type": "proxy", "path": "/api/voice-streaming/*" },
+    { "from": "voice_sending_card", "to": "nginx", "type": "websocket", "path": "wss://.../api/voice-streaming/ws" },
+    { "from": "voice_receiving_card", "to": "nginx", "type": "websocket", "path": "wss://.../api/voice-streaming/ws" },
+    { "from": "voice_streaming_component", "to": "homeassistant", "type": "integration", "path": "websocket_api" }
+  ],
+  "python_dependencies": [
+    { "package": "aiohttp", "version": "3.8.6", "purpose": "Web server and WebSocket" },
+    { "package": "aiortc", "version": "1.9.0", "purpose": "WebRTC implementation" },
+    { "package": "numpy", "version": "1.24.3", "purpose": "Audio data processing" }
+  ],
+  "docker_services": [
+    { "name": "homeassistant", "image": "homeassistant/home-assistant:stable" },
+    { "name": "voice_streaming", "image": "custom:webrtc_backend" },
+    { "name": "nginx", "image": "nginx:alpine" }
+  ],
+  "entry_points": [
+    { "type": "script", "path": "start_services.sh", "command": "docker compose up -d" },
+    { "type": "container", "path": "webrtc_backend/Dockerfile", "command": "python webrtc_server_relay.py" }
+  ],
+  "file_inventory": {
+    "total_files": 32,
+    "by_type": {
+      "python": 7,
+      "javascript": 10,
+      "yaml": 3,
+      "json": 2,
+      "markdown": 5,
+      "shell": 3,
+      "nginx": 1,
+      "dockerfile": 1
+    }
+  }
+}
