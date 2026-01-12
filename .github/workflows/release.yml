@@ -61,7 +61,7 @@ jobs:
           # Copy backend files
           cp -r config/custom_components/voice_streaming/* dist/custom_components/voice_streaming/
           
-          # Create a www directory inside the component to serve the cards self-contained (optional but good practice)
+          # Create a www directory inside the component to serve the cards self-contained
           mkdir -p dist/custom_components/voice_streaming/www
           cp config/www/*.js dist/custom_components/voice_streaming/www/
           
@@ -78,12 +78,25 @@ jobs:
           zip -r ../../voice-receiving-card.zip voice-receiving-card.js
           cd ../..
 
+      - name: Determine Version
+        id: version
+        run: |
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            # Triggered by tag
+            VERSION=${GITHUB_REF#refs/tags/}
+            echo "TAG_NAME=$VERSION" >> $GITHUB_ENV
+          else
+            # Triggered manually or by branch, read from manifest
+            VERSION=$(grep '"version":' config/custom_components/voice_streaming/manifest.json | awk -F '"' '{print $4}')
+            echo "TAG_NAME=v$VERSION" >> $GITHUB_ENV
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
       - name: Generate release notes
         id: release_notes
         run: |
-          VERSION=${GITHUB_REF#refs/tags/}
           echo "notes<<EOF" >> $GITHUB_OUTPUT
-          echo "## Release $VERSION" >> $GITHUB_OUTPUT
+          echo "## Release ${{ env.TAG_NAME }}" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
           echo "### Installation via HACS" >> $GITHUB_OUTPUT
           echo "1. Ensure HACS is installed." >> $GITHUB_OUTPUT
@@ -95,12 +108,13 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          name: "Release ${{ github.ref_name }}"
+          tag_name: ${{ env.TAG_NAME }}
+          name: "Release ${{ env.TAG_NAME }}"
           body: ${{ steps.release_notes.outputs.notes }}
           files: |
             voice_streaming.zip
-            config/www/voice-sending-card.js
-            config/www/voice-receiving-card.js
+            voice-sending-card.zip
+            voice-receiving-card.zip
           draft: false
           prerelease: false
         env:

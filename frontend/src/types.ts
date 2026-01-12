@@ -9,6 +9,7 @@ export interface LovelaceCardConfig {
 export interface VoiceStreamingCardConfig extends LovelaceCardConfig {
   type: string;
   name?: string;
+  title?: string;
   server_url?: string;
   auto_start?: boolean;
   noise_suppression?: boolean;
@@ -19,6 +20,7 @@ export interface VoiceStreamingCardConfig extends LovelaceCardConfig {
 export interface VoiceReceivingCardConfig extends LovelaceCardConfig {
   type: string;
   name?: string;
+  title?: string;
   server_url?: string;
   auto_play?: boolean;
   volume_boost?: number;

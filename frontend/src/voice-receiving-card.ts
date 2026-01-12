@@ -203,7 +203,7 @@ export class VoiceReceivingCard extends LitElement {
   public static getStubConfig(): VoiceReceivingCardConfig {
     return {
       type: "custom:voice-receiving-card",
-      name: "Voice Receiver",
+      title: "Voice Receiver",
       auto_play: true,
     };
   }
@@ -211,6 +211,12 @@ export class VoiceReceivingCard extends LitElement {
   public setConfig(config: VoiceReceivingCardConfig): void {
     if (!config) throw new Error("Invalid configuration");
     this.config = config;
+
+    if (this.webrtc) {
+      this.webrtc.updateConfig({
+        serverUrl: this.config.server_url,
+      });
+    }
   }
 
   public getCardSize(): number {
@@ -482,7 +488,7 @@ export class VoiceReceivingCard extends LitElement {
     return html`
       <ha-card>
         <div class="header">
-          <div class="title">${this.config.name || "Voice Receive"}</div>
+          <div class="title">${this.config.title || this.config.name || "Voice Receive"}</div>
           <div class="status-badge ${this.status}">${this.status}</div>
         </div>
 

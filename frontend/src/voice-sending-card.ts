@@ -34,7 +34,7 @@ export class VoiceSendingCard extends LitElement {
   public static getStubConfig(): VoiceStreamingCardConfig {
     return {
       type: "custom:voice-sending-card",
-      name: "Voice Sender",
+      title: "Voice Sender",
       auto_start: false,
       noise_suppression: true,
       echo_cancellation: true,
@@ -165,7 +165,7 @@ export class VoiceSendingCard extends LitElement {
     return html`
       <ha-card>
         <div class="header">
-          <div class="title">${this.config.name || "Voice Send"}</div>
+          <div class="title">${this.config.title || this.config.name || "Voice Send"}</div>
           <div class="status-badge ${this.status}">${this.status}</div>
         </div>
 

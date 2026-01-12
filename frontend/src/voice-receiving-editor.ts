@@ -41,7 +41,7 @@ export class VoiceReceivingCardEditor extends LitElement {
 
     return html`
       <div class="card-config">
-        <ha-textfield label="Name" .value=${this._config.name || ""} .configValue=${"name"} @input=${this._valueChanged}></ha-textfield>
+        <ha-textfield label="Title" .value=${this._config.title || ""} .configValue=${"title"} @input=${this._valueChanged}></ha-textfield>
         <ha-textfield
           label="Server URL (optional)"
           .value=${this._config.server_url || ""}

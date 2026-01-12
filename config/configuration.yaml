@@ -24,19 +24,6 @@ http:
     - https://homeassistant.local
     - https://10.132.148.130
 
-# Custom panels for our voice streaming interface
-panel_custom:
-  - name: voice-sending-card
-    sidebar_title: Voice Send
-    sidebar_icon: mdi:microphone
-    url_path: voice-streaming
-    module_url: /local/voice-sending-card.js
-  - name: voice-receiving-card
-    sidebar_title: Voice Receive
-    sidebar_icon: mdi:headphones
-    url_path: voice-receiving
-    module_url: /local/voice-receiving-card.js
-
 # Voice streaming component
 voice_streaming:
 
@@ -59,5 +46,5 @@ logger:
     homeassistant.components.http: info
 
 # # Enable YAML Dashboard
-# lovelace:
-#   mode: yaml
+lovelace:
+  mode: yaml
