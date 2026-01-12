@@ -47,7 +47,7 @@ The solution consists of four main components:
 
    ```bash
    git clone https://github.com/Ahmed9190/voice-streaming-addon.git
-   cd home_assistant
+   cd voice-streaming-addon
    ```
 
 2. Start the services:
