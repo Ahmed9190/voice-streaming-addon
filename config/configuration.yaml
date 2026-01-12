@@ -58,6 +58,6 @@ logger:
     # Track HTTP requests
     homeassistant.components.http: info
 
-# Enable YAML Dashboard
-lovelace:
-  mode: yaml
+# # Enable YAML Dashboard
+# lovelace:
+#   mode: yaml

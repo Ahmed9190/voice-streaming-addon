@@ -4,12 +4,16 @@ import logging
 
 from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import config_validation as cv
 
 _LOGGER = logging.getLogger(__name__)
 
 
 DOMAIN = "voice_streaming"
 STREAM_URL = "http://192.168.2.120:8081/stream/latest.mp3"
+
+# This integration doesn't require YAML configuration
+CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 
 async def async_setup(hass: HomeAssistant, config: dict):

@@ -1,9 +1,10 @@
 {
   "domain": "voice_streaming",
   "name": "Voice Streaming",
-  "documentation": "https://github.com/Ahmed9190/voice-streaming-addon",
-  "dependencies": ["websocket_api"],
   "codeowners": ["@Ahmed9190"],
+  "dependencies": ["websocket_api"],
+  "documentation": "https://github.com/Ahmed9190/voice-streaming-addon",
+  "iot_class": "local_push",
   "requirements": [],
   "version": "1.0.0"
 }

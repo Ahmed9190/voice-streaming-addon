@@ -1,681 +1,77 @@
-// Voice Sending Card for Home Assistant
-// This card provides a UI for sending real-time voice streams using WebRTC
-
-(function () {
-  'use strict';
-
-  // Constants for configuration
-  const CONSTANTS = {
-    RECONNECT: {
-      INITIAL_DELAY: 1000,
-      MAX_DELAY: 30000,
-      BACKOFF_FACTOR: 1.5,
-    },
-    AUDIO: {
-      SAMPLE_RATE: 16000,
-      FFT_SIZE: 256,
-    },
-    LATENCY: {
-      LOW: 50,
-      MEDIUM: 150,
+import{i as t,_ as e,n as i,r as s,a,b as n,t as o,e as c,s as r,W as h}from"./styles-YY3p615I.js";let l=class extends a{setConfig(t){this._config=t}_valueChanged(t){if(!this._config||!this.hass)return;const e=t.target;if(this[`_${e.configValue}`]!==e.value){if(e.configValue)if(""===e.value){const t={...this._config};delete t[e.configValue],this._config=t}else this._config={...this._config,[e.configValue]:void 0!==e.checked?e.checked:e.value};this.dispatchEvent(new CustomEvent("config-changed",{detail:{config:this._config},bubbles:!0,composed:!0}))}}render(){return this.hass&&this._config?n`
+      <div class="card-config">
+        <ha-textfield label="Name" .value=${this._config.name||""} .configValue=${"name"} @input=${this._valueChanged}></ha-textfield>
+        <ha-textfield
+          label="Server URL (optional)"
+          .value=${this._config.server_url||""}
+          .configValue=${"server_url"}
+          helper="Defaults to localhost:8080/ws"
+          @input=${this._valueChanged}
+        ></ha-textfield>
+        <div class="side-by-side">
+          <ha-formfield label="Auto Start">
+            <ha-switch .checked=${!1!==this._config.auto_start} .configValue=${"auto_start"} @change=${this._valueChanged}></ha-switch>
+          </ha-formfield>
+          <ha-formfield label="Noise Suppression">
+            <ha-switch .checked=${!1!==this._config.noise_suppression} .configValue=${"noise_suppression"} @change=${this._valueChanged}></ha-switch>
+          </ha-formfield>
+        </div>
+        <div class="side-by-side">
+          <ha-formfield label="Echo Cancellation">
+            <ha-switch .checked=${!1!==this._config.echo_cancellation} .configValue=${"echo_cancellation"} @change=${this._valueChanged}></ha-switch>
+          </ha-formfield>
+          <ha-formfield label="Auto Gain Control">
+            <ha-switch .checked=${!1!==this._config.auto_gain_control} .configValue=${"auto_gain_control"} @change=${this._valueChanged}></ha-switch>
+          </ha-formfield>
+        </div>
+      </div>
+    `:n``}};l.styles=t`
+    .card-config {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
     }
-  };
-
-  // Define the custom element
-  class VoiceSendingCard extends HTMLElement {
-    constructor() {
-      super();
-      this.attachShadow({ mode: 'open' });
-      this.isActive = false;
-      this.connectionStatus = 'disconnected';
-      this.latency = 0;
-      this.errorMessage = '';
-      this.mediaStream = null;
-      this.peerConnection = null;
-      this.websocket = null;
-      this.audioContext = null;
-      this.analyzer = null;
-      this.canvas = null;
-      this.canvasContext = null;
-      this.connectionAttempts = 0;
-      this.reconnectDelay = CONSTANTS.RECONNECT.INITIAL_DELAY;
-      this.maxReconnectDelay = CONSTANTS.RECONNECT.MAX_DELAY;
-      this.reconnectTimer = null;
-      this.hass = null;
-      this.config = {};
+    .side-by-side {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
     }
-
-    // Set hass object
-    setHass(hass) {
-      this.hass = hass;
+    ha-textfield {
+      width: 100%;
     }
-
-    // Set configuration
-    setConfig(config) {
-      this.config = config;
+    ha-formfield {
+      padding-bottom: 8px;
     }
+  `,e([i({attribute:!1})],l.prototype,"hass",void 0),e([s()],l.prototype,"_config",void 0),l=e([o("voice-sending-card-editor")],l);let d=class extends a{constructor(){super(...arguments),this.status="disconnected",this.errorMessage="",this.latency=0,this.webrtc=null,this.animationFrame=null}static get styles(){return[r,t`
+        /* Add specific styles if needed */
+      `]}static async getConfigElement(){return document.createElement("voice-sending-card-editor")}static getStubConfig(){return{type:"custom:voice-sending-card",name:"Voice Sender",auto_start:!1,noise_suppression:!0,echo_cancellation:!0,auto_gain_control:!0}}setConfig(t){if(!t)throw new Error("Invalid configuration");this.config=t,this.webrtc&&this.webrtc.updateConfig({serverUrl:this.config.server_url,noiseSuppression:this.config.noise_suppression,echoCancellation:this.config.echo_cancellation,autoGainControl:this.config.auto_gain_control})}getCardSize(){return 3}connectedCallback(){super.connectedCallback(),this.webrtc||(this.webrtc=new h({serverUrl:this.config?.server_url,noiseSuppression:this.config?.noise_suppression,echoCancellation:this.config?.echo_cancellation,autoGainControl:this.config?.auto_gain_control})),this.webrtc.addEventListener("state-changed",t=>{this.status=t.detail.state,t.detail.error?this.errorMessage=t.detail.error:this.errorMessage="",this.requestUpdate()}),this.webrtc.addEventListener("audio-data",t=>{t.detail.timestamp&&(this.latency=Date.now()-1e3*t.detail.timestamp)}),!0===this.config?.auto_start&&this.toggleSending()}disconnectedCallback(){super.disconnectedCallback(),this.stopVisualization(),this.webrtc?.stop()}async toggleSending(){"connected"===this.status||"connecting"===this.status?(this.webrtc?.stop(),this.stopVisualization()):(await(this.webrtc?.startSending()),this.startVisualization())}startVisualization(){if(!this.canvas||!this.webrtc)return;const t=this.canvas.getContext("2d");if(!t)return;const e=()=>{const i=this.webrtc?.getAnalyser();if(!i)return void(this.animationFrame=requestAnimationFrame(e));const s=i.frequencyBinCount,a=new Uint8Array(s);i.getByteFrequencyData(a),t.fillStyle="rgb(240, 240, 240)",t.fillRect(0,0,this.canvas.width,this.canvas.height);const n=this.canvas.width/s*2.5;let o,c=0;for(let e=0;e<s;e++)o=a[e]/255*this.canvas.height,t.fillStyle=`rgb(${o+100}, 50, 50)`,t.fillRect(c,this.canvas.height-o/2,n,o),c+=n+1;this.animationFrame=requestAnimationFrame(e)};e()}stopVisualization(){this.animationFrame&&(cancelAnimationFrame(this.animationFrame),this.animationFrame=null)}render(){if(!this.config)return n``;const t="connected"===this.status,e=t?"🛑":"🎤";return this.errorMessage||this.status,n`
+      <ha-card>
+        <div class="header">
+          <div class="title">${this.config.name||"Voice Send"}</div>
+          <div class="status-badge ${this.status}">${this.status}</div>
+        </div>
 
-    // Get card size
-    getCardSize() {
-      return 3;
-    }
+        <div class="content">
+          <div class="visualization">
+            <canvas width="300" height="64"></canvas>
+          </div>
 
-    // Connected callback
-    connectedCallback() {
-      this.render();
-      setTimeout(() => {
-        this.updateStatus('disconnected');
-      }, 100);
-    }
-
-    // Render the UI
-    render() {
-      this.shadowRoot.innerHTML = `
-        <style>
-          :host {
-            display: block;
-            padding: 16px;
-            border-radius: 8px;
-            background: var(--ha-card-background, white);
-            box-shadow: var(--ha-card-box-shadow);
-          }
-          
-          .controls {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            margin-bottom: 16px;
-          }
-          
-          .send-button {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-          }
-          
-          .send-button.inactive {
-            background: #f44336;
-            color: white;
-          }
-          
-          .send-button.active {
-            background: #4caf50;
-            color: white;
-            animation: pulse 1.5s infinite;
-          }
-          
-          .send-button.connecting {
-            background: #ff9800;
-            color: white;
-          }
-          
-          @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
-          }
-          
-          .status {
-            flex: 1;
-            text-align: center;
-          }
-          
-          .waveform {
-            height: 100px;
-            width: 100%;
-            background: #f0f0f0;
-            border-radius: 4px;
-            position: relative;
-            overflow: hidden;
-            margin-bottom: 16px;
-          }
-          
-          .waveform canvas {
-            width: 100%;
-            height: 100%;
-          }
-          
-          .settings {
-            margin-top: 16px;
-            padding: 16px;
-            background: var(--secondary-background-color);
-            border-radius: 4px;
-          }
-          
-          .setting-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 8px;
-          }
-          
-          .latency-indicator {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: bold;
-          }
-          
-          .latency-low { background: #4caf50; color: white; }
-          .latency-medium { background: #ff9800; color: white; }
-          .latency-high { background: #f44336; color: white; }
-          
-          .connection-indicator {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 8px;
-            animation: pulse-dot 2s infinite;
-          }
-          
-          .connection-indicator.connected {
-            background: #4caf50;
-          }
-          
-          .connection-indicator.connecting {
-            background: #ff9800;
-          }
-          
-          .connection-indicator.disconnected {
-            background: #f44336;
-          }
-          
-          @keyframes pulse-dot {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-          }
-          
-          .error {
-            color: #f44336;
-            font-weight: bold;
-            margin-top: 8px;
-          }
-        </style>
-        
-        <div class="card-content">
-          <h2>Voice Sending</h2>
-          
           <div class="controls">
             <button 
-              class="send-button ${this.isActive ? 'active' : 'inactive'}"
-              id="sendButton"
+              class="main-button ${t?"active":""} ${"error"===this.status?"error":""}"
+              @click=${this.toggleSending}
+              ?disabled=${"connecting"===this.status}
             >
-              ${this.isActive ? '🛑' : '🎤'}
+              ${e}
             </button>
-            
-            <div class="status">
-              <div>
-                <span class="connection-indicator ${this.connectionStatus}" id="connectionIndicator"></span>
-                Status: <span id="statusText">${this.connectionStatus}</span>
-              </div>
-              <div class="latency-indicator ${this.getLatencyClass()}">
-                Latency: <span id="latencyText">${this.latency}</span>ms
-              </div>
-            </div>
           </div>
-          
-          <div class="error" id="errorMessage">${this.errorMessage}</div>
-          
-          <div class="waveform">
-            <canvas width="400" height="100"></canvas>
+
+          <div class="stats">
+            ${t?n`<span>Latency: ${this.latency}ms</span>`:""}
           </div>
-          
-          <div class="settings">
-            <div class="setting-row">
-              <label>Noise Suppression:</label>
-              <input type="checkbox" id="noiseSuppression" checked>
-            </div>
-            <div class="setting-row">
-              <label>Echo Cancellation:</label>
-              <input type="checkbox" id="echoCancellation" checked>
-            </div>
-            <div class="setting-row">
-              <label>Auto Gain Control:</label>
-              <input type="checkbox" id="autoGainControl" checked>
-            </div>
-          </div>
+
+          ${this.errorMessage?n`<div class="error-message">${this.errorMessage}</div>`:""}
         </div>
-      `;
-
-      // Add event listeners
-      this.shadowRoot.getElementById('sendButton').addEventListener('click', () => {
-        this.toggleSending();
-      });
-
-      // Initialize canvas
-      this.canvas = this.shadowRoot.querySelector('canvas');
-      if (this.canvas) {
-        this.canvasContext = this.canvas.getContext('2d');
-      }
-    }
-
-    // Toggle sending
-    async toggleSending() {
-      if (this.isActive) {
-        await this.stopSending();
-      } else {
-        await this.startSending();
-      }
-    }
-
-    // Start sending audio
-    async startSending() {
-      try {
-        this.updateStatus('connecting');
-
-        // First connect WebSocket if not already connected
-        if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
-          await this.connectWebSocket();
-        }
-
-        // Try to get local IP address for direct connection
-        this.getLocalIPAddress().then(ip => {
-          if (ip && this.websocket && this.websocket.readyState === WebSocket.OPEN) {
-            this.websocket.send(JSON.stringify({
-              type: 'local_ip',
-              ip: ip
-            }));
-          }
-        }).catch(e => {
-          console.log('Could not get local IP address:', e);
-        });
-
-        // Request microphone permission
-        this.mediaStream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-            sampleRate: CONSTANTS.AUDIO.SAMPLE_RATE,
-            channelCount: 1
-          }
-        });
-
-        // Initialize audio context for visualization
-        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        this.analyzer = this.audioContext.createAnalyser();
-
-        const source = this.audioContext.createMediaStreamSource(this.mediaStream);
-        source.connect(this.analyzer);
-
-        this.analyzer.fftSize = CONSTANTS.AUDIO.FFT_SIZE;
-        this.startAudioVisualization();
-
-        // Create RTCPeerConnection with LAN-only settings (no external STUN)
-        this.peerConnection = new RTCPeerConnection({
-          iceServers: [],  // Empty for LAN-only operation
-          bundlePolicy: 'max-bundle',
-          rtcpMuxPolicy: 'require',
-          sdpSemantics: 'unified-plan',
-          iceCandidatePoolSize: 0,
-          iceTransportPolicy: 'all'
-        });
-
-        // Add audio track
-        this.mediaStream.getAudioTracks().forEach(track => {
-          this.peerConnection.addTrack(track, this.mediaStream);
-        });
-
-        // Handle ICE candidates
-        this.peerConnection.onicecandidate = (event) => {
-          if (event.candidate) {
-            console.log('Local ICE candidate gathered:', event.candidate);
-            if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
-              this.websocket.send(JSON.stringify({
-                type: 'ice_candidate',
-                candidate: event.candidate
-              }));
-            }
-          } else {
-            console.log('ICE gathering completed');
-          }
-        };
-
-        // Handle ICE connection state changes
-        this.peerConnection.oniceconnectionstatechange = () => {
-          console.log('ICE connection state:', this.peerConnection.iceConnectionState);
-          if (this.peerConnection.iceConnectionState === 'failed' ||
-            this.peerConnection.iceConnectionState === 'disconnected') {
-            console.log('ICE connection failed or disconnected');
-            this.updateStatus('error');
-            this.errorMessage = 'Connection failed: ' + this.peerConnection.iceConnectionState;
-            this.updateError();
-          } else if (this.peerConnection.iceConnectionState === 'connected' ||
-            this.peerConnection.iceConnectionState === 'completed') {
-            console.log('ICE connection successful');
-            this.updateStatus('connected');
-            this.errorMessage = '';
-            this.updateError();
-          }
-        };
-
-        // Notify backend that we want to start sending
-        this.websocket.send(JSON.stringify({
-          type: 'start_sending'
-        }));
-
-        this.isActive = true;
-        this.updateStatus('connected');
-        this.errorMessage = '';
-        this.render();
-
-      } catch (error) {
-        console.error('Error starting sending:', error);
-        this.updateStatus('error');
-        this.errorMessage = `Error starting sending: ${error.message}`;
-        this.updateError();
-      }
-    }
-
-    // Stop sending
-    async stopSending() {
-      if (this.peerConnection) {
-        this.peerConnection.close();
-        this.peerConnection = null;
-      }
-
-      if (this.mediaStream) {
-        this.mediaStream.getTracks().forEach(track => track.stop());
-        this.mediaStream = null;
-      }
-
-      if (this.audioContext) {
-        this.audioContext.close();
-        this.audioContext = null;
-      }
-
-      if (this.analyzer) {
-        this.analyzer = null;
-      }
-
-      // Send stop message to backend
-      if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
-        this.websocket.send(JSON.stringify({
-          type: 'stop_stream'
-        }));
-      }
-
-      this.isActive = false;
-      this.updateStatus('connected'); // Keep connection status as connected
-      this.render();
-    }
-
-    // Connect to WebSocket
-    async connectWebSocket() {
-      return new Promise((resolve, reject) => {
-        try {
-          const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-          const wsUrl = `${protocol}//${window.location.host}/api/voice-streaming/ws`;
-
-          this.websocket = new WebSocket(wsUrl);
-
-          this.websocket.onopen = () => {
-            console.log('WebSocket connected');
-            this.connectionAttempts = 0;
-            this.reconnectDelay = CONSTANTS.RECONNECT.INITIAL_DELAY; // Reset delay on successful connection
-            this.updateStatus('connected');
-            resolve();
-          };
-
-          this.websocket.onmessage = async (event) => {
-            const data = JSON.parse(event.data);
-            await this.handleWebSocketMessage(data);
-          };
-
-          this.websocket.onerror = (error) => {
-            console.error('WebSocket error:', error);
-            reject(error);
-          };
-
-          this.websocket.onclose = () => {
-            console.log('WebSocket closed');
-            this.updateStatus('disconnected');
-
-            // Clear any existing reconnect timer
-            if (this.reconnectTimer) {
-              clearTimeout(this.reconnectTimer);
-            }
-
-            // Always attempt to reconnect with exponential backoff
-            this.connectionAttempts++;
-            const delay = Math.min(this.reconnectDelay * Math.pow(CONSTANTS.RECONNECT.BACKOFF_FACTOR, this.connectionAttempts - 1), this.maxReconnectDelay);
-
-            console.log(`Reconnecting in ${delay}ms (attempt ${this.connectionAttempts})...`);
-            this.errorMessage = `Reconnecting in ${Math.round(delay / 1000)}s...`;
-            this.updateError();
-
-            this.reconnectTimer = setTimeout(() => {
-              this.connectWebSocket().then(() => {
-                console.log('Reconnected successfully');
-                this.errorMessage = '';
-                this.updateError();
-                // Reinitialize if we were active
-                if (this.isActive) {
-                  this.stopSending();
-                  this.startSending();
-                }
-              }).catch(e => {
-                console.error('Reconnect failed:', e);
-              });
-            }, delay);
-          };
-        } catch (error) {
-          console.error('Error connecting to WebSocket:', error);
-          reject(error);
-        }
-      });
-    }
-
-    // Handle WebSocket messages
-    async handleWebSocketMessage(data) {
-      switch (data.type) {
-        case 'sender_ready':
-          console.log('Sender ready');
-          // Create offer now that we're ready to send
-          if (this.peerConnection) {
-            try {
-              // Wait a bit for the peer connection to be fully set up
-              await new Promise(resolve => setTimeout(resolve, 100));
-
-              const offer = await this.peerConnection.createOffer({
-                offerToReceiveAudio: false,
-                offerToReceiveVideo: false
-              });
-
-              await this.peerConnection.setLocalDescription(offer);
-
-              if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
-                this.websocket.send(JSON.stringify({
-                  type: 'webrtc_offer',
-                  offer: {
-                    sdp: this.peerConnection.localDescription.sdp,
-                    type: this.peerConnection.localDescription.type
-                  }
-                }));
-              }
-            } catch (error) {
-              console.error('Error creating offer:', error);
-              this.updateStatus('error');
-              this.errorMessage = `Error creating offer: ${error.message}`;
-              this.updateError();
-            }
-          }
-          break;
-
-        case 'webrtc_answer':
-          if (this.peerConnection) {
-            await this.peerConnection.setRemoteDescription(
-              new RTCSessionDescription(data.answer)
-            );
-          }
-          break;
-
-        case 'audio_data':
-          // Handle processed audio data from server
-          this.updateLatency(data.timestamp);
-          break;
-      }
-    }
-
-    // Start audio visualization
-    startAudioVisualization() {
-      if (!this.analyzer || !this.canvasContext) return;
-
-      const dataArray = new Uint8Array(this.analyzer.frequencyBinCount);
-
-      const draw = () => {
-        requestAnimationFrame(draw);
-
-        if (!this.analyzer) return;
-
-        this.analyzer.getByteFrequencyData(dataArray);
-
-        this.canvasContext.fillStyle = '#f0f0f0';
-        this.canvasContext.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-        const barWidth = (this.canvas.width / dataArray.length) * 2.5;
-        let barHeight;
-        let x = 0;
-
-        for (let i = 0; i < dataArray.length; i++) {
-          barHeight = (dataArray[i] / 255) * this.canvas.height;
-
-          this.canvasContext.fillStyle = `rgb(${barHeight + 100}, 50, 50)`;
-          this.canvasContext.fillRect(x, this.canvas.height - barHeight / 2,
-            barWidth, barHeight);
-
-          x += barWidth + 1;
-        }
-      };
-
-      draw();
-    }
-
-    // Update latency
-    updateLatency(serverTimestamp) {
-      const now = Date.now();
-      this.latency = now - (serverTimestamp * 1000);
-      const latencyText = this.shadowRoot.getElementById('latencyText');
-      if (latencyText) {
-        latencyText.textContent = this.latency;
-      }
-
-      // Update latency indicator class
-      const latencyIndicator = this.shadowRoot.querySelector('.latency-indicator');
-      if (latencyIndicator) {
-        latencyIndicator.className = 'latency-indicator ' + this.getLatencyClass();
-      }
-    }
-
-    // Get latency class
-    getLatencyClass() {
-      if (this.latency < CONSTANTS.LATENCY.LOW) return 'latency-low';
-      if (this.latency < CONSTANTS.LATENCY.MEDIUM) return 'latency-medium';
-      return 'latency-high';
-    }
-
-    // Update status
-    updateStatus(status) {
-      this.connectionStatus = status;
-      const statusText = this.shadowRoot.getElementById('statusText');
-      if (statusText) {
-        statusText.textContent = status;
-      }
-
-      // Update connection indicator
-      const indicator = this.shadowRoot.getElementById('connectionIndicator');
-      if (indicator) {
-        indicator.className = `connection-indicator ${status}`;
-      }
-
-      // Update button
-      const button = this.shadowRoot.getElementById('sendButton');
-      if (button) {
-        if (this.isActive) {
-          button.className = 'send-button active';
-        } else if (this.connectionStatus === 'connecting') {
-          button.className = 'send-button connecting';
-        } else {
-          button.className = 'send-button inactive';
-        }
-      }
-    }
-
-    // Update error message
-    updateError() {
-      const errorElement = this.shadowRoot.getElementById('errorMessage');
-      if (errorElement) {
-        errorElement.textContent = this.errorMessage;
-      }
-    }
-
-    // Get local IP address
-    getLocalIPAddress() {
-      return new Promise((resolve, reject) => {
-        // Create a WebRTC peer connection to get local IP
-        const pc = new RTCPeerConnection({
-          iceServers: []
-        });
-
-        pc.createDataChannel('');
-        pc.createOffer()
-          .then(offer => pc.setLocalDescription(offer))
-          .then(() => {
-            setTimeout(() => {
-              const lines = pc.localDescription.sdp.split('\n');
-              for (let i = 0; i < lines.length; i++) {
-                if (lines[i].indexOf('candidate') < 0) continue;
-                const parts = lines[i].split(' ');
-                const ip = parts[4];
-                // Check if it's a private IP address (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
-                if (ip.startsWith('192.168.') || ip.startsWith('10.') ||
-                  (ip.startsWith('172.') && parseInt(ip.split('.')[1]) >= 16 && parseInt(ip.split('.')[1]) <= 31)) {
-                  pc.close();
-                  resolve(ip);
-                  return;
-                }
-              }
-              pc.close();
-              reject('No local IP found');
-            }, 1000);
-          })
-          .catch(err => {
-            pc.close();
-            reject(err);
-          });
-      });
-    }
-  }
-
-  // Define the custom element
-  if (!customElements.get('voice-sending-card')) {
-    customElements.define('voice-sending-card', VoiceSendingCard);
-  }
-
-  // Register with Home Assistant
-  window.customCards = window.customCards || [];
-  window.customCards.push({
-    type: 'voice-sending-card',
-    name: 'Voice Sending Card',
-    description: 'Real-time voice sending with WebRTC',
-    preview: false,
-    documentationURL: ''
-  });
-
-  // For panel custom integration
-  if (!window.HASS_VOICE_SENDING_CARD) {
-    window.HASS_VOICE_SENDING_CARD = VoiceSendingCard;
-  }
-
-  // Export for module usage
-  if (typeof module !== 'undefined' && module.exports) {
-    module.exports = VoiceSendingCard;
-  }
-})();
+      </ha-card>
+    `}};e([i({attribute:!1})],d.prototype,"hass",void 0),e([s()],d.prototype,"config",void 0),e([s()],d.prototype,"status",void 0),e([s()],d.prototype,"errorMessage",void 0),e([s()],d.prototype,"latency",void 0),e([c("canvas")],d.prototype,"canvas",void 0),d=e([o("voice-sending-card")],d),window.customCards=window.customCards||[],window.customCards.push({type:"voice-sending-card",name:"Voice Sending Card",description:"Send voice audio via WebRTC",preview:!0,editor:"voice-sending-card-editor"});export{d as VoiceSendingCard};
+//# sourceMappingURL=voice-sending-card.js.map
