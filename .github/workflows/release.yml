@@ -1,4 +1,4 @@
-name: Release
+name: Build and Release
 
 on:
   push:
@@ -7,8 +7,38 @@ on:
   workflow_dispatch:
 
 jobs:
+  build:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build Frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: config/www/
+          retention-days: 1
+
   release:
     name: Create Release
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -17,28 +47,49 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Prepare Release Artifact
+      - name: Download Frontend Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: config/www/
+
+      - name: Prepare Release Artifact (Integration)
         run: |
-          mkdir -p dist/custom_components
-          cp -r config/custom_components/voice_streaming dist/custom_components/
+          # Ensure custom_components structure exists
+          mkdir -p dist/custom_components/voice_streaming
+          
+          # Copy backend files
+          cp -r config/custom_components/voice_streaming/* dist/custom_components/voice_streaming/
+          
+          # Create a www directory inside the component to serve the cards self-contained (optional but good practice)
+          mkdir -p dist/custom_components/voice_streaming/www
+          cp config/www/*.js dist/custom_components/voice_streaming/www/
+          
+          # Zip the custom component
           cd dist
           zip -r ../voice_streaming.zip custom_components
           cd ..
-          ls -l voice_streaming.zip
+          
+      - name: Prepare Release Artifacts (Cards)
+        run: |
+          # Zip individual cards for HACS Plugin usage
+          cd config/www
+          zip -r ../../voice-sending-card.zip voice-sending-card.js
+          zip -r ../../voice-receiving-card.zip voice-receiving-card.js
+          cd ../..
 
       - name: Generate release notes
         id: release_notes
         run: |
-          # Simple release notes generator
           VERSION=${GITHUB_REF#refs/tags/}
           echo "notes<<EOF" >> $GITHUB_OUTPUT
           echo "## Release $VERSION" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
           echo "### Installation via HACS" >> $GITHUB_OUTPUT
           echo "1. Ensure HACS is installed." >> $GITHUB_OUTPUT
-          echo "2. Add this repository as a custom repository (Integration)." >> $GITHUB_OUTPUT
+          echo "2. Add this repository as a custom repository." >> $GITHUB_OUTPUT
           echo "3. Install 'Voice Streaming'." >> $GITHUB_OUTPUT
-          echo "4. Restart Home Assistant." >> $GITHUB_OUTPUT
+          echo "4. The frontend cards are included." >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
@@ -48,6 +99,8 @@ jobs:
           body: ${{ steps.release_notes.outputs.notes }}
           files: |
             voice_streaming.zip
+            config/www/voice-sending-card.js
+            config/www/voice-receiving-card.js
           draft: false
           prerelease: false
         env:

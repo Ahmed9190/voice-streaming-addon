@@ -45,7 +45,7 @@ Before you begin, ensure you have:
 ### Step 1: Clone the Repository
 
 ```bash
-git clone <repository-url> webrtc_voice_sending
+git clone https://github.com/Ahmed9190/voice-streaming-addon.git webrtc_voice_sending
 cd webrtc_voice_sending
 ```
 

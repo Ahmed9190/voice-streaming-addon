@@ -46,7 +46,7 @@ The solution consists of four main components:
 1. Clone this repository:
 
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/Ahmed9190/voice-streaming-addon.git
    cd home_assistant
    ```
 
