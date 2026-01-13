@@ -69,6 +69,10 @@ async def async_setup(hass: HomeAssistant, config: dict):
 
 async def async_setup_entry(hass: HomeAssistant, entry):
     """Set up Voice Streaming from a config entry."""
+    hass.data.setdefault(DOMAIN, {})
+    # Initialize component data if not already present
+    if "websocket_connections" not in hass.data[DOMAIN]:
+        hass.data[DOMAIN]["websocket_connections"] = {}
     return True
 
 

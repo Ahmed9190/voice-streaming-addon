@@ -1,6 +1,7 @@
 {
   "domain": "voice_streaming",
   "name": "Voice Streaming",
+  "config_flow": true,
   "codeowners": ["@Ahmed9190"],
   "dependencies": ["websocket_api"],
   "documentation": "https://github.com/Ahmed9190/voice-streaming-addon",
