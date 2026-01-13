@@ -1,9 +1,0 @@
-{
-  "domain": "voice_streaming",
-  "name": "Voice Streaming",
-  "documentation": "https://github.com/Ahmed9190/voice-streaming-addon",
-  "dependencies": [],
-  "codeowners": ["@Ahmed9190"],
-  "requirements": [],
-  "version": "1.0.0"
-}

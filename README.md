@@ -22,6 +22,16 @@ The solution consists of four main components:
 3. **Voice Sending Card**: Custom panel for sending voice streams
 4. **Voice Receiving Card**: Custom panel for receiving and playing back voice streams
 
+## Documentation
+
+For more detailed information, please refer to the documentation in the `docs/` directory:
+
+- [**Installation Guides**](docs/installation/): Setup via HACS, SSL certificates, and frontend reloading.
+- [**Usage Guide**](docs/usage/): detailed usage instructions, troubleshooting and debugging.
+- [**Architecture**](docs/architecture/): Technical design, server relay, and URL parsing details.
+- [**Development**](docs/dev/): Development plans and requirements.
+- [**Troubleshooting & Fixes**](docs/troubleshooting/): History of bug fixes and technical solutions (useful for understanding past issues).
+
 ## Prerequisites
 
 - Docker and Docker Compose
