@@ -28,16 +28,14 @@ jobs:
         working-directory: frontend
         run: npm run build
 
-      - name: Validate Build Output
-        run: |
-          if [ ! -f "config/www/voice-sending-card.js" ]; then
-            echo "Error: voice-sending-card.js not found after build"
-            exit 1
           fi
-          if [ ! -f "config/www/voice-receiving-card.js" ]; then
-            echo "Error: voice-receiving-card.js not found after build"
-            exit 1
-          fi
+      
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: config/www/
+          retention-days: 1
 
   validate-backend:
     name: Validate Backend Structure
@@ -61,6 +59,16 @@ jobs:
           fi
           echo "Structure validation passed."
 
+  validate-hacs:
+    name: HACS Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: HACS Validation
+        uses: hacs/action@main
+        with:
+          category: integration
+
   hassfest:
     name: Hassfest Validation
     runs-on: ubuntu-latest
@@ -68,3 +76,70 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: home-assistant/actions/hassfest@master
+
+  release:
+    name: Automatic Release
+    needs: [build-frontend, validate-backend, hassfest, validate-hacs]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if version exists
+        id: check_version
+        run: |
+          VERSION=$(grep '"version":' custom_components/voice_streaming/manifest.json | awk -F '"' '{print $4}')
+          TAG="v$VERSION"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists. Skipping release."
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "Tag $TAG does not exist. Creating release."
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "VERSION=$VERSION" >> $GITHUB_ENV
+            echo "TAG_NAME=$TAG" >> $GITHUB_ENV
+          fi
+
+      - name: Download Frontend Artifacts
+        if: steps.check_version.outputs.exists == 'false'
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: config/www/
+
+      - name: Prepare Release Artifacts
+        if: steps.check_version.outputs.exists == 'false'
+        run: |
+          mkdir -p dist/custom_components/voice_streaming
+          cp -r custom_components/voice_streaming/* dist/custom_components/voice_streaming/
+          mkdir -p dist/custom_components/voice_streaming/www
+          cp config/www/*.js dist/custom_components/voice_streaming/www/
+          
+          cd dist/custom_components/voice_streaming
+          zip -r ../../../voice_streaming.zip .
+          cd ../..
+          
+          cd config/www
+          zip -r ../../voice-sending-card.zip voice-sending-card.js
+          zip -r ../../voice-receiving-card.zip voice-receiving-card.js
+          cd ../..
+
+      - name: Create GitHub Release
+        if: steps.check_version.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.TAG_NAME }}
+          name: "Release ${{ env.TAG_NAME }}"
+          body: "Automated release triggered by version bump."
+          files: |
+            voice_streaming.zip
+            voice-sending-card.zip
+            voice-receiving-card.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
