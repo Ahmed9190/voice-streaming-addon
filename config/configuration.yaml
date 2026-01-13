@@ -24,6 +24,19 @@ http:
     - https://homeassistant.local
     - https://10.132.148.130
 
+# Custom panels for our voice streaming interface
+panel_custom:
+  - name: voice-sending-card
+    sidebar_title: Voice Send
+    sidebar_icon: mdi:microphone
+    url_path: voice-streaming
+    module_url: /local/voice-sending-card.js
+  - name: voice-receiving-card
+    sidebar_title: Voice Receive
+    sidebar_icon: mdi:headphones
+    url_path: voice-receiving
+    module_url: /local/voice-receiving-card.js
+
 # Voice streaming component
 voice_streaming:
 
@@ -32,7 +45,7 @@ media_player:
 
 # Shell command to control VLC directly (bypassing UI integration requirement)
 shell_command:
-  play_vlc_stream: 'echo -e "admin\nadd http://192.168.2.185:8081/stream/latest.mp3" | nc 192.168.2.185 4212'
+  play_vlc_stream: 'echo -e "admin\nadd http://192.168.2.120:8081/stream/latest.mp3" | nc 192.168.2.120 4212'
 
 # Logging for debugging
 logger:
