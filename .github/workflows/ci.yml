@@ -28,7 +28,7 @@ jobs:
         working-directory: frontend
         run: npm run build
 
-          fi
+
       
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
