@@ -65,9 +65,9 @@ jobs:
           mkdir -p dist/custom_components/voice_streaming/www
           cp config/www/*.js dist/custom_components/voice_streaming/www/
           
-          # Zip the custom component
-          cd dist/custom_components
-          zip -r ../../voice_streaming.zip voice_streaming
+          # Zip the custom component (CONTENT only, to avoid double nesting in HACS)
+          cd dist/custom_components/voice_streaming
+          zip -r ../../../voice_streaming.zip .
           cd ../..
           
       - name: Prepare Release Artifacts (Cards)
