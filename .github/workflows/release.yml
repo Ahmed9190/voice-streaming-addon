@@ -66,9 +66,9 @@ jobs:
           cp config/www/*.js dist/custom_components/voice_streaming/www/
           
           # Zip the custom component
-          cd dist
-          zip -r ../voice_streaming.zip custom_components
-          cd ..
+          cd dist/custom_components
+          zip -r ../../voice_streaming.zip voice_streaming
+          cd ../..
           
       - name: Prepare Release Artifacts (Cards)
         run: |

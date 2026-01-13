@@ -1,6 +1,7 @@
 """Voice Streaming integration for Home Assistant."""
 
 import logging
+import os
 
 from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant
@@ -23,6 +24,17 @@ async def async_setup(hass: HomeAssistant, config: dict):
     hass.data[DOMAIN] = {
         "websocket_connections": {},
     }
+
+    # Register static path for frontend cards (HACS support)
+    # This serves the bundled js files at /voice_streaming_static/
+    component_dir = os.path.dirname(__file__)
+    www_dir = os.path.join(component_dir, "www")
+
+    if os.path.isdir(www_dir):
+        _LOGGER.info(f"Registering static path: {www_dir}")
+        hass.http.register_static_path(
+            "/voice_streaming_static", www_dir, cache_headers=True
+        )
 
     # Register WebSocket API commands
     _LOGGER.info("Registering WebSocket commands")
