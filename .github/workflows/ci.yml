@@ -110,7 +110,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: frontend-build
-          path: config/www/
+          path: config/www
 
       - name: Prepare Release Artifacts
         if: steps.check_version.outputs.exists == 'false'
