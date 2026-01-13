@@ -10,7 +10,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 DOMAIN = "voice_streaming"
-STREAM_URL = "http://192.168.2.120:8081/stream/latest.mp3"
+STREAM_URL = "http://192.168.2.185:8081/stream/latest.mp3"
 
 # This integration doesn't require YAML configuration
 CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)

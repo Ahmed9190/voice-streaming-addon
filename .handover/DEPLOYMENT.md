@@ -12,7 +12,7 @@
   - Docker & Docker Compose
   - `curl`, `ffmpeg` (optional for debug)
 - **Network**:
-  - Static IP recommended (e.g., `192.168.2.120`)
+  - Static IP recommended (e.g., `192.168.2.185`)
   - Ports: 8123 (HA), 8080 (Signal/API), 8081 (Audio), 50000-50100 (UDP RTP)
 
 ## 🛠️ Quick Start (Production)

@@ -64,7 +64,7 @@ fi
 
 # Final Fallback
 if [ -z "$IP" ]; then
-    IP="192.168.2.120"
+    IP="192.168.2.185"
 fi
 
 # 6. Display Access Info
@@ -73,8 +73,6 @@ echo -e "${BLUE}║                  🚀 SYSTEM IS READY 🚀                  
 echo -e "${BLUE}╚═══════════════════════════════════════════════════════════════╝${NC}"
 echo -e "\nAccess the system at:"
 echo -e "   🏠 Home Assistant:   ${GREEN}https://${IP}${NC}"
-echo -e "   🎙️  Voice Send:       ${GREEN}https://${IP}/voice-streaming${NC}"
-echo -e "   🔊 Voice Receive:    ${GREEN}https://${IP}/voice-receiving${NC}"
 echo -e "   ⚙️  Backend Status:   ${GREEN}http://${IP}:8080/health${NC}"
 echo -e "   📈 Metrics:          ${GREEN}http://${IP}:8080/metrics${NC}"
 echo -e "   📻 Audio Stream:     ${GREEN}http://${IP}:8081/stream/latest.mp3${NC}"

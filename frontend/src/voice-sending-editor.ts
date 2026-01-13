@@ -49,6 +49,13 @@ export class VoiceSendingCardEditor extends LitElement {
           helper="Defaults to localhost:8080/ws"
           @input=${this._valueChanged}
         ></ha-textfield>
+        <ha-textfield
+          label="Target Media Player (optional)"
+          .value=${this._config.target_media_player || ""}
+          .configValue=${"target_media_player"}
+          helper="Entity ID e.g. media_player.living_room_speaker"
+          @input=${this._valueChanged}
+        ></ha-textfield>
         <div class="side-by-side">
           <ha-formfield label="Auto Start">
             <ha-switch .checked=${this._config.auto_start !== false} .configValue=${"auto_start"} @change=${this._valueChanged}></ha-switch>

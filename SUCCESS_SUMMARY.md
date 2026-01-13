@@ -6,7 +6,7 @@
 
 ```
 ✅ WebSocket Connection
-   wss://192.168.2.120/ws → CONNECTED
+   wss://192.168.2.185/ws → CONNECTED
 
 ✅ WebRTC Signaling
    Offer/Answer exchange → COMPLETED
@@ -27,7 +27,7 @@
 ## 📊 Your Console Logs (Decoded)
 
 ```javascript
-[WebRTC] Connecting to: wss://192.168.2.120/ws
+[WebRTC] Connecting to: wss://192.168.2.185/ws
 // ✅ WebSocket connection initiated
 
 [WebRTC] ICE connection state: checking
@@ -79,7 +79,7 @@
 ### 1. ✅ WebSocket URL Parsing
 
 **Was:** Incorrectly adding port 8080
-**Now:** Correctly uses `wss://192.168.2.120/ws`
+**Now:** Correctly uses `wss://192.168.2.185/ws`
 
 ### 2. ✅ Nginx Proxy Configuration
 
@@ -108,7 +108,7 @@
 ```yaml
 type: custom:voice-receiving-card
 name: Voice Receiver
-server_url: https://192.168.2.120/ws # ✅ Correct!
+server_url: https://192.168.2.185/ws # ✅ Correct!
 auto_play: true
 ```
 
@@ -117,7 +117,7 @@ auto_play: true
 ```yaml
 type: custom:voice-sending-card
 name: Voice Sender
-server_url: https://192.168.2.120/ws # ✅ Correct!
+server_url: https://192.168.2.185/ws # ✅ Correct!
 auto_start: false
 noise_suppression: true
 echo_cancellation: true

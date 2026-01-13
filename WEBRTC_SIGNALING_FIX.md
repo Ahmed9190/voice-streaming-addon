@@ -120,7 +120,7 @@ try {
 ### Expected Console Output (Success)
 
 ```
-[WebRTC] Connecting to: wss://192.168.2.120/ws
+[WebRTC] Connecting to: wss://192.168.2.185/ws
 WebSocket connection established
 [WebRTC] Starting receiving...
 [WebRTC] Peer connection created, sending start_receiving

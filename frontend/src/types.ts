@@ -15,6 +15,7 @@ export interface VoiceStreamingCardConfig extends LovelaceCardConfig {
   noise_suppression?: boolean;
   echo_cancellation?: boolean;
   auto_gain_control?: boolean;
+  target_media_player?: string;
 }
 
 export interface VoiceReceivingCardConfig extends LovelaceCardConfig {
@@ -30,6 +31,7 @@ export interface HomeAssistant {
   auth: any;
   conn: any;
   states: any;
+  callService: (domain: string, service: string, serviceData?: object) => Promise<void>;
 }
 
 export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";

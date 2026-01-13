@@ -34,8 +34,8 @@ The server now uses `MediaRelay` from aiortc to efficiently relay audio tracks f
 
 **Use cases:**
 
-- Play in VLC: `vlc http://192.168.2.120:8080/stream/latest.mp3`
-- Play in browser: `<audio src="http://192.168.2.120:8080/stream/latest.mp3" controls>`
+- Play in VLC: `vlc http://192.168.2.185:8080/stream/latest.mp3`
+- Play in browser: `<audio src="http://192.168.2.185:8080/stream/latest.mp3" controls>`
 - Home Assistant media player
 
 ### 3. Stream Management
@@ -120,13 +120,13 @@ The server now uses `MediaRelay` from aiortc to efficiently relay audio tracks f
 **In browser:**
 
 ```
-http://192.168.2.120:8080/stream/latest.mp3
+http://192.168.2.185:8080/stream/latest.mp3
 ```
 
 **In VLC:**
 
 ```bash
-vlc http://192.168.2.120:8080/stream/latest.mp3
+vlc http://192.168.2.185:8080/stream/latest.mp3
 ```
 
 **In Home Assistant:**
@@ -136,7 +136,7 @@ service: media_player.play_media
 target:
   entity_id: media_player.living_room
 data:
-  media_content_id: http://192.168.2.120:8080/stream/latest.mp3
+  media_content_id: http://192.168.2.185:8080/stream/latest.mp3
   media_content_type: music
 ```
 
@@ -211,7 +211,7 @@ docker restart voice-streaming
    - **Should hear audio!** 🎵
 
 3. **Test MP3 streaming:**
-   - Open `http://192.168.2.120:8080/stream/latest.mp3` in browser
+   - Open `http://192.168.2.185:8080/stream/latest.mp3` in browser
    - Or play in VLC
 
 ## Troubleshooting

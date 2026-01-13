@@ -86,7 +86,7 @@ export class VoiceSendingCard extends LitElement {
 
     this.webrtc.addEventListener("audio-data", (e: any) => {
       if (e.detail.timestamp) {
-        this.latency = Date.now() - (e.detail.timestamp * 1000);
+        this.latency = Date.now() - e.detail.timestamp * 1000;
       }
     });
 
@@ -106,9 +106,36 @@ export class VoiceSendingCard extends LitElement {
     if (this.status === "connected" || this.status === "connecting") {
       this.webrtc?.stop();
       this.stopVisualization();
+      await this.manageMediaPlayer("stop");
     } else {
       await this.webrtc?.startSending();
       this.startVisualization();
+      await this.manageMediaPlayer("play");
+    }
+  }
+
+  private async manageMediaPlayer(action: "play" | "stop") {
+    if (!this.config.target_media_player || !this.hass) return;
+
+    try {
+      if (action === "play") {
+        // Construct stream URL - assuming port 8081 is exposed for audio
+        // We use HTTP because many local media players (Sonos, etc) struggle with self-signed HTTPS
+        const streamUrl = `http://${window.location.hostname}:8081/stream/latest.mp3`;
+
+        await this.hass.callService("media_player", "play_media", {
+          entity_id: this.config.target_media_player,
+          media_content_id: streamUrl,
+          media_content_type: "music",
+        });
+      } else {
+        await this.hass.callService("media_player", "media_stop", {
+          entity_id: this.config.target_media_player,
+        });
+      }
+    } catch (e) {
+      console.error("Failed to control media player:", e);
+      this.errorMessage = `Media Player Error: ${(e as Error).message}`;
     }
   }
 
@@ -175,8 +202,8 @@ export class VoiceSendingCard extends LitElement {
           </div>
 
           <div class="controls">
-            <button 
-              class="main-button ${isSending ? "active" : ""} ${this.status === 'error' ? 'error' : ''}"
+            <button
+              class="main-button ${isSending ? "active" : ""} ${this.status === "error" ? "error" : ""}"
               @click=${this.toggleSending}
               ?disabled=${this.status === "connecting"}
             >
@@ -184,9 +211,7 @@ export class VoiceSendingCard extends LitElement {
             </button>
           </div>
 
-          <div class="stats">
-            ${isSending ? html`<span>Latency: ${this.latency}ms</span>` : ""}
-          </div>
+          <div class="stats">${isSending ? html`<span>Latency: ${this.latency}ms</span>` : ""}</div>
 
           ${this.errorMessage ? html`<div class="error-message">${this.errorMessage}</div>` : ""}
         </div>

@@ -4,7 +4,7 @@
 
 ```bash
 ✅ wss://localhost/ws → WORKS
-✅ wss://192.168.2.120/ws → WORKS
+✅ wss://192.168.2.185/ws → WORKS
 ❌ Browser connection → FAILS
 ```
 
@@ -22,7 +22,7 @@ The issue is **BROWSER CACHE** + possible **HOSTNAME MISMATCH**.
 ### Why Browser Fails:
 
 1. **Cached JavaScript files** - Browser is using old code
-2. **Possible hostname mismatch** - You access HA via `192.168.2.120` but card might be configured for `localhost`
+2. **Possible hostname mismatch** - You access HA via `192.168.2.185` but card might be configured for `localhost`
 
 ## 🚀 THE SOLUTION (3 Steps)
 
@@ -30,15 +30,15 @@ The issue is **BROWSER CACHE** + possible **HOSTNAME MISMATCH**.
 
 **CRITICAL:** The Server URL must match how you access Home Assistant!
 
-If you access HA via: `https://192.168.2.120`
-Then configure: `https://192.168.2.120/ws`
+If you access HA via: `https://192.168.2.185`
+Then configure: `https://192.168.2.185/ws`
 
 **How to do it:**
 
 1. Go to your dashboard
 2. Edit the Voice Receiving Card (click the 3 dots → Edit)
 3. In the visual editor, find "Server URL (optional)"
-4. Enter: `https://192.168.2.120/ws`
+4. Enter: `https://192.168.2.185/ws`
 5. Click Save
 
 ### Step 2: Clear Browser Cache (NUCLEAR OPTION)
@@ -75,8 +75,8 @@ Then configure: `https://192.168.2.120/ws`
 **✅ SUCCESS:**
 
 ```
-[WebRTC] Connecting to: wss://192.168.2.120/ws
-WebSocket connection to 'wss://192.168.2.120/ws' established
+[WebRTC] Connecting to: wss://192.168.2.185/ws
+WebSocket connection to 'wss://192.168.2.185/ws' established
 ```
 
 **❌ STILL FAILING (Old Code):**
@@ -89,10 +89,10 @@ WebSocket connection to 'wss://localhost:8080/ws' failed
 
 | You Access HA Via       | Card Server URL            | Result                                               |
 | ----------------------- | -------------------------- | ---------------------------------------------------- |
-| `https://192.168.2.120` | `https://192.168.2.120/ws` | ✅ WORKS                                             |
-| `https://192.168.2.120` | `https://localhost/ws`     | ❌ FAILS (hostname mismatch)                         |
+| `https://192.168.2.185` | `https://192.168.2.185/ws` | ✅ WORKS                                             |
+| `https://192.168.2.185` | `https://localhost/ws`     | ❌ FAILS (hostname mismatch)                         |
 | `https://localhost`     | `https://localhost/ws`     | ✅ WORKS                                             |
-| `https://localhost`     | `https://192.168.2.120/ws` | ⚠️ Might work but not recommended                    |
+| `https://localhost`     | `https://192.168.2.185/ws` | ⚠️ Might work but not recommended                    |
 | (any)                   | (empty/default)            | ⚠️ Will use `ws://hostname:8080/ws` (bypasses Nginx) |
 
 ## 🧪 Quick Test Script
@@ -108,7 +108,7 @@ async def test():
     ssl_ctx.verify_mode = ssl.CERT_NONE
 
     # Use the SAME hostname you use to access HA
-    uri = 'wss://192.168.2.120/ws'  # Change if needed
+    uri = 'wss://192.168.2.185/ws'  # Change if needed
 
     async with websockets.connect(uri, ssl=ssl_ctx) as ws:
         await ws.send(json.dumps({'type': 'get_available_streams'}))
@@ -160,15 +160,15 @@ asyncio.run(test())
 
 **What You Need to Do:**
 
-1. 🔧 Update card config: `https://192.168.2.120/ws`
+1. 🔧 Update card config: `https://192.168.2.185/ws`
 2. 🧹 Clear browser cache (or use incognito)
 3. ✅ Test and verify
 
 **Expected Result:**
 
 ```
-[WebRTC] Connecting to: wss://192.168.2.120/ws
-WebSocket connection to 'wss://192.168.2.120/ws' established
+[WebRTC] Connecting to: wss://192.168.2.185/ws
+WebSocket connection to 'wss://192.168.2.185/ws' established
 Status: connected
 Available Streams: 0
 ```

@@ -20,7 +20,95 @@ class AudioStreamServer:
 
     async def latest_stream_handler(self, request):
         if not self.relay_server.active_streams:
-            return web.Response(status=404, text="No active streams")
+            html_content = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body {
+                        background-color: #1c1c1c;
+                        color: #e0e0e0;
+                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        height: 100vh;
+                        margin: 0;
+                        text-align: center;
+                    }
+                    .loader {
+                        border: 4px solid #333;
+                        border-top: 4px solid #03a9f4;
+                        border-radius: 50%;
+                        width: 40px;
+                        height: 40px;
+                        animation: spin 1s linear infinite;
+                        margin-bottom: 20px;
+                    }
+                    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                    .btn {
+                        background-color: #03a9f4;
+                        border: none;
+                        color: white;
+                        padding: 12px 24px;
+                        text-align: center;
+                        text-decoration: none;
+                        display: inline-block;
+                        font-size: 16px;
+                        margin-top: 20px;
+                        cursor: pointer;
+                        border-radius: 4px;
+                        transition: background-color 0.3s;
+                        font-weight: 500;
+                    }
+                    .btn:hover {
+                        background-color: #0288d1;
+                    }
+                </style>
+                <script>
+                    let delay = 1000;
+                    let polling = true;
+
+                    async function checkStream() {
+                        if (!polling) return;
+
+                        try {
+                            const response = await fetch('/api/voice-audio/stream/status');
+                            if (response.ok) {
+                                const data = await response.json();
+                                if (data.active_streams && data.active_streams.length > 0) {
+                                    // Stream detected
+                                    polling = false;
+                                    document.getElementById('loader').style.display = 'none';
+                                    document.getElementById('status-text').innerText = 'Audio Stream Ready';
+                                    document.getElementById('status-text').style.color = '#4CAF50';
+                                    document.getElementById('start-btn').style.display = 'inline-block';
+                                    return;
+                                }
+                            }
+                        } catch (e) {
+                            console.log("Waiting for stream...");
+                        }
+
+                        // Exponential backoff
+                        delay = Math.min(delay * 1.5, 10000);
+                        setTimeout(checkStream, delay);
+                    }
+                    // Check initially
+                    setTimeout(checkStream, delay);
+                </script>
+            </head>
+            <body>
+                <div>
+                    <div id="loader" class="loader" style="margin: 0 auto 20px auto;"></div>
+                    <h3 id="status-text">Waiting for Audio Stream...</h3>
+                    <button id="start-btn" class="btn" style="display: none;" onclick="window.location.reload()">Start Listening</button>
+                    <p style="color: #888; font-size: 0.9em; margin-top: 20px;">Standby Mode</p>
+                </div>
+            </body>
+            </html>
+            """
+            return web.Response(text=html_content, content_type="text/html")
 
         # Get latest stream (last inserted key)
         stream_id = list(self.relay_server.active_streams.keys())[-1]

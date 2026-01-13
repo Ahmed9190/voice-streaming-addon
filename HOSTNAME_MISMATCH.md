@@ -2,14 +2,14 @@
 
 ## The Problem
 
-You're accessing Home Assistant from: **`https://192.168.2.120`**
+You're accessing Home Assistant from: **`https://192.168.2.185`**
 But the card is trying to connect to: **`wss://localhost/ws`**
 
 ### Why This Fails
 
-When you access HA from `https://192.168.2.120`, the browser's security policy prevents connecting to `wss://localhost/ws` because:
+When you access HA from `https://192.168.2.185`, the browser's security policy prevents connecting to `wss://localhost/ws` because:
 
-1. **Different hostnames** (192.168.2.120 vs localhost)
+1. **Different hostnames** (192.168.2.185 vs localhost)
 2. **Mixed content** security restrictions
 3. **CORS/Same-Origin Policy**
 
@@ -19,8 +19,8 @@ When you access HA from `https://192.168.2.120`, the browser's security policy p
 
 **Configure the card to use the SAME hostname you're accessing HA from:**
 
-If accessing HA via: `https://192.168.2.120`
-Then configure card with: `https://192.168.2.120/ws`
+If accessing HA via: `https://192.168.2.185`
+Then configure card with: `https://192.168.2.185/ws`
 
 If accessing HA via: `https://localhost`
 Then configure card with: `https://localhost/ws`
@@ -38,7 +38,7 @@ The card will automatically use the correct hostname from `window.location.hostn
 1. Edit the Voice Receiving Card
 2. Find "Server URL" field
 3. **Change from:** `https://localhost/ws`
-4. **Change to:** `https://192.168.2.120/ws`
+4. **Change to:** `https://192.168.2.185/ws`
 5. **OR leave it EMPTY** (recommended)
 6. Save
 
@@ -47,7 +47,7 @@ The card will automatically use the correct hostname from `window.location.hostn
 1. Edit the Voice Receiving Card
 2. Clear the "Server URL" field (make it empty)
 3. Save
-4. The card will auto-detect and use: `wss://192.168.2.120:8080/ws`
+4. The card will auto-detect and use: `wss://192.168.2.185:8080/ws`
 
 Wait... that won't work either because it will add port 8080!
 
@@ -55,9 +55,9 @@ Wait... that won't work either because it will add port 8080!
 
 Since you want to use Nginx proxy (port 443), you need:
 
-**Server URL:** `https://192.168.2.120/ws`
+**Server URL:** `https://192.168.2.185/ws`
 
-This will connect to: `wss://192.168.2.120/ws` (through Nginx on port 443)
+This will connect to: `wss://192.168.2.185/ws` (through Nginx on port 443)
 
 ## Testing
 
@@ -68,15 +68,15 @@ After changing the configuration:
 3. **Click "Auto Listen"**
 4. **Check console (F12):**
    ```
-   [WebRTC] Connecting to: wss://192.168.2.120/ws
-   WebSocket connection to 'wss://192.168.2.120/ws' established ✅
+   [WebRTC] Connecting to: wss://192.168.2.185/ws
+   WebSocket connection to 'wss://192.168.2.185/ws' established ✅
    ```
 
 ## Why localhost Worked in Python Test
 
 The Python test ran on the **same machine** as the server, so `localhost` resolves correctly.
 
-But when you access HA from your browser at `192.168.2.120`, the browser tries to connect to `localhost` **on your local machine**, not the server!
+But when you access HA from your browser at `192.168.2.185`, the browser tries to connect to `localhost` **on your local machine**, not the server!
 
 ## Quick Verification
 
@@ -95,7 +95,7 @@ async def test():
     ssl_context.check_hostname = False
     ssl_context.verify_mode = ssl.CERT_NONE
 
-    uri = 'wss://192.168.2.120/ws'
+    uri = 'wss://192.168.2.185/ws'
     print(f'Testing: {uri}')
 
     async with websockets.connect(uri, ssl=ssl_context) as ws:
@@ -109,8 +109,8 @@ asyncio.run(test())
 
 ## Summary
 
-**The Issue:** Hostname mismatch (localhost vs 192.168.2.120)
-**The Fix:** Configure card with `https://192.168.2.120/ws`
+**The Issue:** Hostname mismatch (localhost vs 192.168.2.185)
+**The Fix:** Configure card with `https://192.168.2.185/ws`
 **Why:** Browser security requires same hostname for WebSocket connections
 
 ---

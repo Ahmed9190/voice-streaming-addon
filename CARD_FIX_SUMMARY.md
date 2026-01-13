@@ -49,7 +49,7 @@ This guarantees no cache:
 
 - **Chrome:** `Ctrl + Shift + N`
 - **Firefox:** `Ctrl + Shift + P`
-- Then go to: `https://192.168.2.120`
+- Then go to: `https://192.168.2.185`
 
 ### Step 4: Verify Cards Load
 
@@ -139,7 +139,7 @@ resources:
 # Voice Receiver
 - type: custom:voice-receiving-card
   title: Voice Receiver
-  server_url: https://192.168.2.120/ws # Match your HA URL!
+  server_url: https://192.168.2.185/ws # Match your HA URL!
 ```
 
 ## Timeline
