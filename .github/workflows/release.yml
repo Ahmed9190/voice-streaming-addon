@@ -59,7 +59,7 @@ jobs:
           mkdir -p dist/custom_components/voice_streaming
           
           # Copy backend files
-          cp -r config/custom_components/voice_streaming/* dist/custom_components/voice_streaming/
+          cp -r custom_components/voice_streaming/* dist/custom_components/voice_streaming/
           
           # Create a www directory inside the component to serve the cards self-contained
           mkdir -p dist/custom_components/voice_streaming/www
@@ -87,7 +87,7 @@ jobs:
             echo "TAG_NAME=$VERSION" >> $GITHUB_ENV
           else
             # Triggered manually or by branch, read from manifest
-            VERSION=$(grep '"version":' config/custom_components/voice_streaming/manifest.json | awk -F '"' '{print $4}')
+            VERSION=$(grep '"version":' custom_components/voice_streaming/manifest.json | awk -F '"' '{print $4}')
             echo "TAG_NAME=v$VERSION" >> $GITHUB_ENV
           fi
           echo "VERSION=$VERSION" >> $GITHUB_ENV
