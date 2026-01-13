@@ -120,14 +120,12 @@ jobs:
           mkdir -p dist/custom_components/voice_streaming/www
           cp config/www/*.js dist/custom_components/voice_streaming/www/
           
-          cd dist/custom_components/voice_streaming
-          zip -r ../../../voice_streaming.zip .
-          cd ../..
+          # Create Integration Zip
+          (cd dist/custom_components/voice_streaming && zip -r ../../../voice_streaming.zip .)
           
-          cd config/www
-          zip -r ../../voice-sending-card.zip voice-sending-card.js
-          zip -r ../../voice-receiving-card.zip voice-receiving-card.js
-          cd ../..
+          # Create Card Zips
+          (cd config/www && zip -r ../../voice-sending-card.zip voice-sending-card.js)
+          (cd config/www && zip -r ../../voice-receiving-card.zip voice-receiving-card.js)
 
       - name: Create GitHub Release
         if: steps.check_version.outputs.exists == 'false'
